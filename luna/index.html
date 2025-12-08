@@ -14,16 +14,18 @@
             touch-action: pan-y;
             cursor: pointer;
             outline: none;
-            /* Hides the default AR button style so we can use our own */
-            --poster-color: transparent;
         }
 
-        /* --- Fullscreen Button (Bottom RIGHT) --- */
+        /* Style for the Expand Button */
         #fullscreen-btn {
             position: absolute;
             bottom: 20px;
-            right: 20px; 
+            
+            /* MOVED TO LEFT SIDE */
+            left: 20px; 
+            
             z-index: 100;
+            
             width: 40px;
             height: 40px;
             background-color: rgba(255, 255, 255, 0.8);
@@ -35,31 +37,7 @@
             justify-content: center;
             box-shadow: 0 2px 5px rgba(0,0,0,0.3);
         }
-
-        /* --- AR Button (Bottom LEFT) --- */
-        #ar-button {
-            position: absolute;
-            bottom: 20px;
-            left: 20px; /* This moves it to the LEFT side */
-            z-index: 100;
-            
-            background-color: rgba(255, 255, 255, 0.8);
-            border-radius: 20px;
-            border: 1px solid #ccc;
-            padding: 10px 16px;
-            font-size: 14px;
-            font-weight: 600;
-            color: #333;
-            cursor: pointer;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-            
-            /* Logic to show/hide only on supported devices */
-            display: none; 
-        }
         
-        /* Only display the button if AR is supported on the device */
-        model-viewer:not([ar-status="failed"]) > #ar-button { display: block; }
-
         /* Icon styling */
         svg { width: 24px; height: 24px; fill: #333; }
     </style>
@@ -75,10 +53,7 @@
             
             minimum-render-scale="1"
             shadow-intensity="1"
-            
-            /* Enable AR */
             ar
-            ar-modes="webxr scene-viewer quick-look"
             
             disable-zoom
             disable-pan
@@ -90,9 +65,6 @@
             
             onclick="toggleControls()"
         >
-            <button slot="ar-button" id="ar-button">
-                View in your space
-            </button>
         </model-viewer>
 
         <button id="fullscreen-btn" onclick="toggleFullscreen()">
