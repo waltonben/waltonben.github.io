@@ -10,6 +10,7 @@
 @media(max-width:800px){.setup{display:block}.setup .setup-rule,.setup .setup-copy{display:block}.up-input{max-width:260px}.setup-input{max-width:100%}.compare-button{max-width:100%}.split-option{max-width:500px}.setup .hint{margin-top:7px}.metrics{grid-template-columns:1fr 1fr}.metric.primary{grid-column:1/-1}}
 @media(max-width:480px){.metric.primary{display:block}.metric.primary .cost-value{text-align:left;font-size:1.9rem}.lay-summary{padding:16px 14px;gap:8px}.lay-summary span{font-size:.75rem}.results-heading{display:block}}
 
+.report-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;font-size:.85rem;color:var(--muted)}@media(max-width:480px){.report-actions{align-items:flex-start;flex-direction:column}}
 </style>
 </head>
 <body>
@@ -322,6 +323,81 @@ function calculate(){
     calculateTimer=setTimeout(()=>{try{finish(solveJob(job,o));}catch(e){finish({error:e.message});}},20);
   }
 }
+function buildA4Report(data, count, columns, created=new Date()) {
+  const plan=data.options.find(p=>p.count===count);
+  if(!plan)throw Error('Select a calculated lay option before exporting.');
+  const up=data.settings.numberUp;
+  if(!Number.isInteger(columns)||columns<1||columns>up)throw Error('Enter valid preview columns before exporting.');
+  const esc=escape, num=fmt, gbp=money;
+  const stamp=created.toLocaleString('en-GB',{dateStyle:'medium',timeStyle:'short'});
+  const title=`Imposition report - ${count} ${count===1?'lay':'lays'}`;
+  const where=i=>plan.lays.flatMap((lay,j)=>lay.allocations.some(a=>a.item===i)?[j+1]:[]).join(', ');
+  const first=data.options[0],difference=first.cost-plan.cost;
+  const totalProduced=plan.produced.reduce((s,v)=>s+v,0);
+  const costs=plan.lays.map((lay,i)=>({material:lay.sheets*data.settings.materialCost/1000,setup:i===0?0:data.settings.setupCost}));
+  const name=i=>`<span class="variant-number">${i+1}.</span> ${esc(data.items[i].name)}`;
+  const proof=plan.exact?'Minimum sheet count proven for this lay count.':'Best arrangement found; a lower-cost allocation may exist.';
+  const head=(label,subtitle)=>`<header><p class="eyebrow">PRESSROOM / IMPOSITION REPORT</p><h1>${label}</h1><p class="muted">${subtitle}</p></header>`;
+  function diagram(lay){
+    const cells=[];
+    for(const a of lay.allocations)for(let k=0;k<a.positions;k++)cells.push(a.item);
+    while(cells.length<up)cells.push(-1);
+    let bands='';
+    // Wide layouts are printed as labelled column bands, retaining row coordinates.
+    for(let start=0;start<columns;start+=16){
+      const end=Math.min(columns,start+16),body=[];
+      for(let row=0;row<Math.ceil(up/columns);row++){
+        const entries=[];
+        for(let col=start;col<end;col++){
+          const pos=row*columns+col,item=cells[pos];
+          entries.push(pos>=up?'<td class="outside">×</td>':item===-1?'<td class="blank">-</td>':`<td><strong>${item+1}</strong><small>Pos ${pos+1}</small></td>`);
+        }
+        body.push(`<tr><th scope="row">${row+1}</th>${entries.join('')}</tr>`);
+      }
+      bands+=`<div class="diagram-band"><h3>${columns>16?`Columns ${start+1}-${end}`:'Position allocation'}</h3><table class="diagram"><thead><tr><th>Row</th>${Array.from({length:end-start},(_,i)=>`<th>${start+i+1}</th>`).join('')}</tr></thead><tbody>${body.join('')}</tbody></table></div>`;
+    }
+    return `<div class="allocation-view"><p class="muted">${columns} columns × ${Math.ceil(up/columns)} rows. Cell numbers identify variants; “Pos” is the position number. “-” is unused; “×” is outside the imposition.${columns>16?' Read column bands side by side to reconstruct the full layout.':''} Allocation guide only; this is not a cutting or artwork layout.</p>${bands}</div>`;
+  }
+  const laySections=plan.lays.map((lay,j)=>{
+    const used=lay.allocations.reduce((s,a)=>s+a.positions,0);
+    const produced=lay.allocations.reduce((s,a)=>s+a.positions*lay.sheets,0);
+    const cost=costs[j];
+    return `<section class="lay-section">${head(`Imposition ${j+1} of ${count}`,`${up}-up · ${num(lay.sheets)} sheets · ${used} positions used · ${up-used} blank`)}
+    <table class="cost-table"><tbody><tr><th>Material</th><td>${num(lay.sheets)} ÷ 1,000 × ${gbp(data.settings.materialCost)}</td><td>${gbp(cost.material)}</td></tr><tr><th>Additional setup</th><td>${j===0?'First setup excluded from comparison':'1 additional lay'}</td><td>${gbp(cost.setup)}</td></tr><tr class="total"><th>Lay comparison cost</th><td></td><td>${gbp(cost.material+cost.setup)}</td></tr></tbody></table>
+    <h2>Variant allocation</h2><table class="production"><colgroup><col style="width:48%"><col style="width:16%"><col style="width:18%"><col style="width:18%"></colgroup><thead><tr><th>Variant</th><th>Positions</th><th>Sheets</th><th>Produced</th></tr></thead><tbody>${lay.allocations.map(a=>`<tr><td>${name(a.item)}</td><td>${a.positions}</td><td>${num(lay.sheets)}</td><td>${num(a.positions*lay.sheets)}</td></tr>`).join('')}<tr class="total"><th>Total</th><td>${used}</td><td>${num(lay.sheets)}</td><td>${num(produced)}</td></tr></tbody></table>
+    ${diagram(lay)}</section>`;
+  }).join('');
+  return `<!doctype html><html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${esc(title)}</title><style>
+  @page{size:A4 portrait;margin:14mm 12mm 16mm;@bottom-left{content:"Imposition report / ${count} ${count===1?'lay':'lays'}";font:8pt Arial;color:#62717a}@bottom-right{content:"Page " counter(page) " of " counter(pages);font:8pt Arial;color:#62717a}}
+  *{box-sizing:border-box}body{margin:0;background:#e9eef0;color:#172c35;font:10pt/1.45 Arial,sans-serif}main{max-width:210mm;margin:22px auto;background:white;padding:14mm 12mm 16mm;box-shadow:0 3px 18px #17313b20}header{border-bottom:2px solid #17333e;padding-bottom:5mm;margin-bottom:6mm}.eyebrow{font-size:8pt;letter-spacing:1.2px;font-weight:bold;color:#4b6673;margin:0 0 2mm}h1{font-size:23pt;line-height:1.15;margin:0 0 3mm}h2{font-size:13pt;margin:5mm 0 3mm}h3{font-size:10pt;margin:5mm 0 2mm}p{margin:0 0 3mm}.muted,.note{color:#566b75;font-size:9pt}.note{margin-top:3mm}.summary{display:table;table-layout:fixed;width:100%;border:1px solid #c6d4da;margin:5mm 0}.summary>div{display:table-cell;padding:4mm;border-right:1px solid #d8e2e6;vertical-align:top}.summary>div:last-child{border:0}.summary strong{display:block;font-size:20pt;margin:1mm 0;overflow-wrap:anywhere}.summary span{font-size:9pt;color:#506771}.summary .primary{background:#edf7dc}table{border-collapse:collapse;width:100%;table-layout:fixed;margin:3mm 0 5mm;font-size:9pt}th,td{border-bottom:1px solid #dbe3e7;padding:2mm 2mm;vertical-align:top;overflow-wrap:anywhere}th{text-align:left;background:#eff3f5;font-weight:bold}td:not(:first-child),th:not(:first-child){text-align:right}thead{display:table-header-group}tr{break-inside:avoid;page-break-inside:avoid}tbody tr:nth-last-child(2){break-after:avoid;page-break-after:avoid}.total td,.total th{background:#edf3e6;font-weight:bold;border-top:1px solid #bdcbd1}.cost-table th{width:33%}.cost-table td:nth-child(2){width:46%;text-align:left}.cost-table td:last-child{width:21%}.settings th{width:39%}.settings td{text-align:left}.variant-number{font-weight:bold}.lay-section{break-before:page;page-break-before:always;padding-top:0}.allocation-view{margin-top:6mm}.diagram-band h3,h1,h2,h3{break-after:avoid;page-break-after:avoid}.diagram{font-size:8pt}.diagram th{padding:1.3mm;text-align:center!important}.diagram td{text-align:center!important;border:1px solid #c2d0d7;padding:2mm 0}.diagram strong{display:block;font-size:11pt}.diagram small{display:block;font-size:6pt;color:#566b75}.diagram .blank{color:#6b7e87;background:#f2f5f6}.diagram .outside{color:#52636c;background:#dce3e7}.diagram th:first-child{width:10mm}.toolbar{display:flex;align-items:center;justify-content:center;gap:20px;padding:16px;background:#17333e;color:#fff;font:14px/1.4 Arial,sans-serif}.toolbar button{padding:10px 16px;background:#c2f45d;color:#17333e;border:0;border-radius:4px;font:600 14px Arial;cursor:pointer}.toolbar span{max-width:480px}.toolbar button:focus-visible{outline:3px solid white;outline-offset:3px}footer{margin-top:6mm;padding-top:3mm;border-top:1px solid #d3dde2;font-size:8pt;color:#566b75}
+  @media print{html,body{background:white}body{print-color-adjust:exact;-webkit-print-color-adjust:exact}main{width:auto;max-width:none;padding:0;margin:0;box-shadow:none}.toolbar{display:none}}
+  @media screen and (max-width:700px){main{margin:0;padding:20px}.toolbar{flex-wrap:wrap}.summary strong{font-size:16pt}}
+  </style></head><body><nav class="toolbar" aria-label="Report actions"><button type="button" onclick="window.print()">Print / Save as PDF</button><span>Choose A4 portrait and 100% scale. Turn off browser headers and footers for a clean report.</span></nav><main>
+  <section>${head('Selected lay cost report',`${esc(title)} · Generated ${esc(stamp)}`)}
+  <p><strong>${count===data.recommendedCount?'Recommended option selected':'Manually selected option'}</strong> · ${proof}</p>
+  <div class="summary"><div class="primary"><span>Comparison cost</span><strong>${gbp(plan.cost)}</strong><span>${count} ${count===1?'lay':'lays'}, first setup excluded</span></div><div><span>Total sheets</span><strong>${num(plan.sheets)}</strong><span>Across all lays</span></div><div><span>Total overs</span><strong>${num(plan.overs)}</strong><span>${(plan.overs/data.required*100).toFixed(1)}% above required</span></div></div>
+  <h2>Cost breakdown</h2><table class="cost-table"><thead><tr><th>Cost</th><th>Calculation</th><th>Amount</th></tr></thead><tbody><tr><th>Material</th><td>${num(plan.sheets)} ÷ 1,000 × ${gbp(data.settings.materialCost)}</td><td>${gbp(plan.material)}</td></tr><tr><th>Additional setups</th><td>${count-1} × ${gbp(data.settings.setupCost)}</td><td>${gbp(plan.setup)}</td></tr><tr class="total"><th>Total comparison cost</th><td></td><td>${gbp(plan.cost)}</td></tr></tbody></table>
+  ${count!==first.count?`<p class="note">${difference>=0?'Saving':'Additional cost'} versus the ${first.count}-lay option found: <strong>${gbp(Math.abs(difference))}</strong> (${num(first.sheets)} sheets / ${gbp(first.cost)}).</p>`:''}
+  <h2>Job settings</h2><table class="settings"><tbody><tr><th>Variants / required units</th><td>${data.items.length} / ${num(data.required)}</td></tr><tr><th>Imposition / preview</th><td>${up}-up / ${columns} columns × ${Math.ceil(up/columns)} rows</td></tr><tr><th>Variant splitting</th><td>${data.settings.allowSplit?`Allowed; ${plan.splitVariants} variants span multiple lays`:'Disabled; each variant stays on one lay'}</td></tr><tr><th>Search limit</th><td>${data.settings.maxLays} lays</td></tr></tbody></table>
+  <p class="note">Material is charged proportionally, not rounded to packs of 1,000. The comparison excludes the first setup, setup waste, spoilage and other running costs. Values are calculated before rounding; displayed line amounts may differ from the total by a penny.</p>
+  <h2>Costs by imposition</h2><table><thead><tr><th>Lay</th><th>Sheets</th><th>Material</th><th>Extra setup</th><th>Total</th></tr></thead><tbody>${plan.lays.map((lay,j)=>`<tr><td>${j+1}</td><td>${num(lay.sheets)}</td><td>${gbp(costs[j].material)}</td><td>${gbp(costs[j].setup)}</td><td>${gbp(costs[j].material+costs[j].setup)}</td></tr>`).join('')}<tr class="total"><th>Total</th><td>${num(plan.sheets)}</td><td>${gbp(plan.material)}</td><td>${gbp(plan.setup)}</td><td>${gbp(plan.cost)}</td></tr></tbody></table></section>
+  <section class="lay-section">${head('Combined production totals',`Selected ${count}-lay option · Quantities are units`)}<p class="note">Produced and overs are combined across every lay. The per-imposition sections show each lay's contribution.</p><table class="production"><colgroup><col style="width:40%"><col style="width:16%"><col style="width:12%"><col style="width:16%"><col style="width:16%"></colgroup><thead><tr><th>Variant</th><th>Required</th><th>Lay(s)</th><th>Produced</th><th>Overs</th></tr></thead><tbody>${data.items.map((item,i)=>`<tr><td>${name(i)}</td><td>${num(item.quantity)}</td><td>${where(i)}</td><td>${num(plan.produced[i])}</td><td>${num(plan.produced[i]-item.quantity)}</td></tr>`).join('')}<tr class="total"><th>Total</th><td>${num(data.required)}</td><td>${count}</td><td>${num(totalProduced)}</td><td>${num(plan.overs)}</td></tr></tbody></table></section>
+  ${laySections}</main></body></html>`;
+}
+function exportA4Report(){
+  try{
+    if(!result)throw Error('Compare lays and select an option before exporting.');
+    const report=buildA4Report(result,selectedCount,Number($('preview-columns').value));
+    const tab=window.open('','_blank');
+    if(tab){tab.opener=null;tab.document.open();tab.document.write(report);tab.document.close();}
+    else{
+      const url=URL.createObjectURL(new Blob([report],{type:'text/html;charset=utf-8'}));
+      const link=document.createElement('a');link.href=url;link.download=`Imposition-report-${selectedCount}-lays.html`;link.click();setTimeout(()=>URL.revokeObjectURL(url),60000);
+    }
+    $('calculation-status').textContent=tab?'A4 report opened. Use Print / Save as PDF in the report.':'Report downloaded because the new tab was blocked. Open it and choose Print / Save as PDF.';
+  }catch(e){$('calculation-error').textContent=e.message;$('calculation-error').hidden=false;}
+}
+
 function renderResults(){
   if(!result)return;
   const columns=Number($('preview-columns').value),up=result.settings.numberUp;
@@ -339,7 +415,7 @@ function renderResults(){
     for(let p=0;p<extra;p++)cells.push('<div class="sheet-cell unavailable" title="Outside the imposition" aria-hidden="true"></div>');
     return `<details class="plan-panel lay-panel" ${j===0?'open':''}><summary class="lay-summary"><strong>Lay ${j+1}</strong><span>${fmt(lay.sheets)} sheets · ${used}/${up} positions</span></summary><div class="table-scroll"><table class="plan-table"><thead><tr><th>Item</th><th>Positions</th><th>Produced on this lay</th></tr></thead><tbody>${lay.allocations.map(a=>`<tr><td><span class="item-label"><span class="swatch" style="--item-color:${colours[a.item%colours.length]}"></span>${a.item+1}. ${escape(result.items[a.item].name)}</span></td><td>${a.positions}</td><td>${fmt(a.positions*lay.sheets)}</td></tr>`).join('')}</tbody></table></div><div class="sheet-view"><div class="sheet-heading"><span>Position allocation</span><span>${columns} columns × ${Math.ceil(up/columns)} rows · ${spare} blank</span></div><div class="table-scroll"><div class="sheet-grid" style="--columns:${columns};min-width:${columns*32}px" role="img" aria-label="Lay ${j+1}, ${columns} columns, ${Math.ceil(up/columns)} rows. ${escape(lay.allocations.map(a=>`${result.items[a.item].name}: ${a.positions} positions`).join('; '))}; ${spare} blank positions.">${cells.join('')}</div></div><p class="sheet-caption">Numbers match the item list. Hatched positions are blank; grey cells are outside the imposition. Preview is an allocation guide, not a cutting or artwork layout.</p></div></details>`;
   }).join('');
-  $('results').innerHTML=`<div class="metrics"><div class="metric primary"><p class="metric-label">${r.count===result.recommendedCount?'Recommended':'Selected'} comparison cost</p><p class="metric-value cost-value">${money(r.cost)}</p><p class="metric-note">${r.count} ${r.count===1?'lay':'lays'} · first setup excluded</p></div><div class="metric"><p class="metric-label">Total sheets</p><p class="metric-value">${fmt(r.sheets)}</p><p class="metric-note">sum of all lay runs</p></div><div class="metric"><p class="metric-label">Total overs</p><p class="metric-value">${fmt(r.overs)}</p><p class="metric-note">${(r.overs/result.required*100).toFixed(1)}% above required units</p></div></div>
+  $('results').innerHTML=`<div class="report-actions"><span>Export the selected ${r.count}-lay option</span><button type="button" class="button" data-export-report>Export A4 report</button></div><div class="metrics"><div class="metric primary"><p class="metric-label">${r.count===result.recommendedCount?'Recommended':'Selected'} comparison cost</p><p class="metric-value cost-value">${money(r.cost)}</p><p class="metric-note">${r.count} ${r.count===1?'lay':'lays'} · first setup excluded</p></div><div class="metric"><p class="metric-label">Total sheets</p><p class="metric-value">${fmt(r.sheets)}</p><p class="metric-note">sum of all lay runs</p></div><div class="metric"><p class="metric-label">Total overs</p><p class="metric-value">${fmt(r.overs)}</p><p class="metric-note">${(r.overs/result.required*100).toFixed(1)}% above required units</p></div></div>
   <div class="plan-panel"><div class="panel-heading"><h3>Compare lay options</h3></div><div class="table-scroll"><table class="comparison-table"><thead><tr><th>Option</th><th>Sheets</th><th>Material</th><th>Extra setups</th><th>Total</th><th>Saving vs ${base.count} ${base.count===1?'lay':'lays'}</th></tr></thead><tbody>${comparison}</tbody></table></div><p class="proof">${allExact?'Minimum sheet counts proven for each lay count shown.':'Best arrangements found in a bounded search; a better arrangement may exist.'} ${r.exact?'Selected plan: minimum sheet count proven. ':''}Search limit: ${result.settings.maxLays} lays${!result.settings.allowSplit&&result.settings.maxLays>result.items.length?` (${result.items.length} possible without splitting)`:''}. ${result.settings.allowSplit?'Splitting allowed; '+r.splitVariants+' variants span multiple lays.':'Each variant stays on one lay.'} Click an option to inspect its production plan.</p></div>
   <div class="plan-panel"><div class="panel-heading"><h3>Combined production totals</h3></div><div class="table-scroll"><table class="plan-table"><thead><tr><th>Item</th><th>Required</th><th>Lay(s)</th><th>Produced</th><th>Overs</th></tr></thead><tbody>${rows.map((v,i)=>`<tr><td><span class="item-label"><span class="swatch" style="--item-color:${colours[i%colours.length]}"></span>${i+1}. ${escape(v.name)}</span></td><td>${fmt(v.quantity)}</td><td>${v.where.join(', ')}</td><td>${fmt(v.produced)}</td><td>${fmt(v.overs)}</td></tr>`).join('')}</tbody><tfoot><tr><td>Total</td><td>${fmt(result.required)}</td><td>${r.count}</td><td>${fmt(result.required+r.overs)}</td><td>${fmt(r.overs)}</td></tr></tfoot></table></div></div>
   ${layPanels}<p class="cost-footnote">Material: total sheets ÷ 1,000 × ${money(result.settings.materialCost)}. Extra setups: (lays − 1) × ${money(result.settings.setupCost)}. Material is charged proportionally, not rounded to packs of 1,000. Excludes the first setup, setup waste, spoilage and other running costs. Equal-cost options favour fewer lays.</p>`;
@@ -350,7 +426,7 @@ $('add-item').addEventListener('click',()=>{if(items.length>=500)return;items.pu
 for(const id of ['number-up','material-cost','setup-cost','max-lays','allow-split'])$(id).addEventListener('input',()=>{if(id==='number-up'){const up=Number($('number-up').value);$('preview-columns').max=String(up);if(up>0&&Number($('preview-columns').value)>up)$('preview-columns').value=String(up);}invalidate();});
 $('preview-columns').addEventListener('input',renderResults);
 $('calculate-button').addEventListener('click',calculate);
-$('results').addEventListener('click',e=>{const button=e.target.closest('[data-plan]');if(!button)return;selectedCount=Number(button.dataset.plan);renderResults();$('results').querySelector(`[data-plan="${selectedCount}"]`).focus();});
+$('results').addEventListener('click',e=>{if(e.target.closest('[data-export-report]')){exportA4Report();return;}const button=e.target.closest('[data-plan]');if(!button)return;selectedCount=Number(button.dataset.plan);renderResults();$('results').querySelector(`[data-plan="${selectedCount}"]`).focus();});
 $('import-button').addEventListener('click',()=>$('csv-file').click());
 $('csv-file').addEventListener('change',async e=>{
   const file=e.target.files[0];if(!file)return;
