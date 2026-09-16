@@ -15,6 +15,7 @@
 .item-actions{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}.optional-label{font-weight:400}.entry-table .code-input{min-width:125px}.entry-table{min-width:680px}#results-heading{scroll-margin-top:20px}@media(max-width:480px){.items-panel>.panel-heading{align-items:flex-start;flex-wrap:wrap}.item-actions{justify-content:flex-start}}
 .brand-logo{width:44px;height:44px;display:block;object-fit:contain;flex-shrink:0}@media(max-width:480px){.brand-sub{max-width:125px}.brand-logo{width:36px;height:36px}}
 .file-drop-overlay{position:fixed;inset:16px;z-index:1000;display:flex;align-items:center;justify-content:center;padding:24px;border:3px dashed #437b5d;border-radius:20px;background:rgba(240,248,243,.96);pointer-events:none;text-align:center;color:#173c2a}.file-drop-overlay[hidden]{display:none}.file-drop-overlay strong{display:block;font-size:clamp(24px,4vw,42px);margin-bottom:12px}.file-drop-overlay p{margin:0;font-size:16px}
+.items-panel>.import-hint{margin:0;padding:0 24px 16px}@media(max-width:1050px){.items-panel>.import-hint{padding-inline:18px}}@media(max-width:480px){.items-panel>.import-hint{padding-inline:14px}}
 </style>
 </head>
 <body>
@@ -49,7 +50,7 @@
   <div class="working-area">
     <section class="items-panel" aria-labelledby="items-heading">
       <div class="panel-heading"><div><p class="section-kicker">02 / JOB ITEMS</p><h2 id="items-heading">Items & quantities <span id="item-count" class="count">1</span></h2></div><div class="item-actions"><button class="button" id="toggle-items" type="button" aria-expanded="true" aria-controls="items-content">Minimise</button><button class="button" id="import-button" type="button"><span aria-hidden="true">↑</span> Import CSV / XLSX</button><input id="import-file" type="file" accept=".csv,.xlsx,text/csv,application/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden></div></div>
-      <p class="hint">Or drag a CSV or XLSX file anywhere onto this page to import. Import replaces the current list.</p>
+      <p class="hint import-hint">Or drag a CSV or XLSX file anywhere onto this page to import. Import replaces the current list.</p>
       <div id="items-content">
       <div id="import-status" role="status" hidden></div>
       <div class="table-scroll"><table class="entry-table"><thead><tr><th class="index-col" scope="col">#</th><th scope="col">Variant name</th><th scope="col">Variant code <span class="optional-label">(optional)</span></th><th class="quantity-col" scope="col">Required quantity</th><th class="delete-col" scope="col"><span class="sr-only">Remove item</span></th></tr></thead><tbody id="items-body"></tbody></table></div>
