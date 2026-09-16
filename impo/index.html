@@ -11,6 +11,7 @@
 @media(max-width:480px){.metric.primary{display:block}.metric.primary .cost-value{text-align:left;font-size:1.9rem}.lay-summary{padding:16px 14px;gap:8px}.lay-summary span{font-size:.75rem}.results-heading{display:block}}
 
 .report-actions{flex-wrap:wrap;display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;font-size:.85rem;color:var(--muted)}@media(max-width:480px){.report-actions{align-items:flex-start;flex-direction:column}}
+.item-actions{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}.optional-label{font-weight:400}.entry-table .code-input{min-width:125px}.entry-table{min-width:680px}#results-heading{scroll-margin-top:20px}@media(max-width:480px){.items-panel>.panel-heading{align-items:flex-start;flex-wrap:wrap}.item-actions{justify-content:flex-start}}
 </style>
 </head>
 <body>
@@ -40,15 +41,17 @@
   </aside>
   <div class="working-area">
     <section class="items-panel" aria-labelledby="items-heading">
-      <div class="panel-heading"><div><p class="section-kicker">02 / JOB ITEMS</p><h2 id="items-heading">Items & quantities <span id="item-count" class="count">1</span></h2></div><button class="button" id="import-button" type="button"><span aria-hidden="true">↑</span> Import CSV</button><input id="csv-file" type="file" accept=".csv,text/csv,application/csv" hidden></div>
+      <div class="panel-heading"><div><p class="section-kicker">02 / JOB ITEMS</p><h2 id="items-heading">Items & quantities <span id="item-count" class="count">1</span></h2></div><div class="item-actions"><button class="button" id="toggle-items" type="button" aria-expanded="true" aria-controls="items-content">Minimise</button><button class="button" id="import-button" type="button"><span aria-hidden="true">↑</span> Import CSV</button><input id="csv-file" type="file" accept=".csv,text/csv,application/csv" hidden></div></div>
+      <div id="items-content">
       <div id="import-status" role="status" hidden></div>
-      <div class="table-scroll"><table class="entry-table"><thead><tr><th class="index-col" scope="col">#</th><th scope="col">Variant name</th><th class="quantity-col" scope="col">Required quantity</th><th class="delete-col" scope="col"><span class="sr-only">Remove item</span></th></tr></thead><tbody id="items-body"></tbody></table></div>
-      <div class="items-footer"><button class="text-button" id="add-item" type="button">+ Add item</button><details class="csv-help"><summary>CSV format &amp; sample</summary><div class="csv-instructions"><p>Use two columns in this order: variant name, quantity. A header row is optional. Import replaces the current list. Files are read in your browser.</p><pre>variant name,quantity
-Item A,10000
-Item B,25000</pre><p>Save as CSV UTF-8 (comma delimited). Names containing commas must be quoted, for example: &quot;Item A, blue&quot;,10000. Use quantities without thousands separators, or quote them: &quot;10,000&quot;. Blank rows are ignored. Maximum 5 MB and 500 variants.</p><a href="data:text/csv;charset=utf-8,variant%20name%2Cquantity%0D%0AItem%20A%2C10000%0D%0AItem%20B%2C25000%0D%0A" download="sample-variants.csv">Download sample CSV</a></div></details></div>
+      <div class="table-scroll"><table class="entry-table"><thead><tr><th class="index-col" scope="col">#</th><th scope="col">Variant name</th><th scope="col">Variant code <span class="optional-label">(optional)</span></th><th class="quantity-col" scope="col">Required quantity</th><th class="delete-col" scope="col"><span class="sr-only">Remove item</span></th></tr></thead><tbody id="items-body"></tbody></table></div>
+      <div class="items-footer"><button class="text-button" id="add-item" type="button">+ Add item</button><details class="csv-help"><summary>CSV format &amp; sample</summary><div class="csv-instructions"><p>Use three columns in this order: Variant Name, Variant Code, Quantity. Name and quantity are required; leave code blank if unused. A header row is optional. Existing two-column name/quantity files are also accepted. Import replaces the current list. Files are read in your browser.</p><pre>Variant Name,Variant Code,Quantity
+Item A,AQL10020,10000
+Item B,,25000</pre><p>Save as CSV UTF-8 (comma delimited). Names containing commas must be quoted, for example: &quot;Item A, blue&quot;,AQL10020,10000. Use quantities without thousands separators, or quote them: &quot;10,000&quot;. Blank rows are ignored. Maximum 5 MB and 500 variants.</p><a href="data:text/csv;charset=utf-8,Variant%20Name%2CVariant%20Code%2CQuantity%0D%0AItem%20A%2CAQL10020%2C10000%0D%0AItem%20B%2C%2C25000%0D%0A" download="sample-variants.csv">Download sample CSV</a></div></details></div>
+      </div>
     </section>
     <section class="results-section" aria-labelledby="results-heading">
-      <div class="results-heading"><div><p class="section-kicker">03 / LAY COMPARISON</p><h2 id="results-heading">Your production plan</h2></div><span class="live-label">Choose an option to view its lays</span></div>
+      <div class="results-heading"><div><p class="section-kicker">03 / LAY COMPARISON</p><h2 id="results-heading" tabindex="-1">Your production plan</h2></div><span class="live-label">Choose an option to view its lays</span></div>
       <div id="calculation-status" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
       <div id="calculation-error" class="error-box" role="alert" hidden></div>
       <div id="results"></div>
@@ -73,6 +76,7 @@ function validateJob(items, o) {
   for (const key of ['materialCost','setupCost']) if (!Number.isFinite(o[key]) || o[key] < 0 || o[key] > 1e9) throw Error('Enter both costs as numbers from £0 to £1,000,000,000.');
   if (!Array.isArray(items) || !items.length || items.length > 500) throw Error('Add between 1 and 500 items.');
   items.forEach((v,i) => {
+    if(v.code!==undefined && (typeof v.code!=='string'||v.code.length>500)) throw Error(`Enter a variant code of no more than 500 characters for item ${i+1}.`);
     if (typeof v.name !== 'string' || !v.name.trim()) throw Error(`Give item ${i+1} a name.`);
     if (!Number.isInteger(v.quantity) || v.quantity < 1 || v.quantity > 1e9) throw Error(`Enter a whole quantity from 1 to 1,000,000,000 for item ${i+1}.`);
   });
@@ -259,18 +263,23 @@ function parseCsv(text) {
   }
   if(quoted)fail('A quoted field is missing its closing quote.');
   endRow();
-  if(!rows.length)throw Error('No variants found. Use two columns: variant name, quantity.');
+  if(!rows.length)throw Error('No variants found. Use Variant Name, Variant Code, Quantity; the code may be blank.');
   const normalise=s=>s.toLowerCase().replace(/[_\s-]+/g,' ').trim();
-  const first=rows[0].fields;
-  if(first.length===2&&['variant name','variant','item name','name'].includes(normalise(first[0]))&&['quantity','qty','required quantity'].includes(normalise(first[1])))rows.shift();
+  const first=rows[0].fields, width=first.length;
+  if(width!==2&&width!==3)throw Error('Use three columns (Variant Name, Variant Code, Quantity), or two columns (Variant Name, Quantity). No items were imported.');
+  const nameHeader=['variant name','variant','item name','name'].includes(normalise(first[0]));
+  const quantityHeader=['quantity','qty','required quantity'].includes(normalise(first[width-1]));
+  const codeHeader=width===2||['variant code','code'].includes(normalise(first[1]));
+  if(nameHeader&&quantityHeader&&codeHeader)rows.shift();
   if(!rows.length)throw Error('The CSV contains a header but no variants.');
   if(rows.length>500)throw Error('Use no more than 500 variants. No items were imported.');
   return rows.map(({fields,line})=>{
-    if(fields.length!==2)throw Error(`CSV line ${line}: expected exactly two columns (variant name, quantity). Quote fields containing commas. No items were imported.`);
-    const [name,rawQuantity]=fields,quantity=parseQuantity(rawQuantity);
+    if(fields.length!==width)throw Error(`CSV line ${line}: expected ${width} columns. For a blank code, keep the empty middle column (Name,,Quantity). Quote fields containing commas. No items were imported.`);
+    const name=fields[0],code=width===3?fields[1]:'',quantity=parseQuantity(fields[width-1]);
+    if(code.length>500)throw Error(`CSV line ${line}: variant code must be no longer than 500 characters. No items were imported.`);
     if(!name||name.length>500)throw Error(`CSV line ${line}: enter a variant name from 1 to 500 characters. No items were imported.`);
     if(!Number.isInteger(quantity)||quantity<1||quantity>1e9)throw Error(`CSV line ${line}: enter a whole quantity from 1 to 1,000,000,000. No items were imported.`);
-    return {name,quantity};
+    return {name,code,quantity};
   });
 }
 
@@ -279,11 +288,16 @@ const fmt=n=>n.toLocaleString('en-GB');
 const money=n=>n.toLocaleString('en-GB',{style:'currency',currency:'GBP'});
 const colours=['#3969a6','#a04473','#397f92','#7056a0','#87702c','#a05738','#287569','#596c86'];
 const escape=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let nextId=1,items=[{id:nextId++,name:'',quantity:''}],result=null,selectedCount=null,worker=null,calculateTimer=null,requestId=0;
+let nextId=1,items=[{id:nextId++,name:'',code:'',quantity:''}],result=null,selectedCount=null,worker=null,calculateTimer=null,requestId=0;
 function drawItems(){
   $('item-count').textContent=items.length;
-  $('items-body').innerHTML=items.length?items.map((i,n)=>`<tr data-id="${i.id}"><td class="row-index">${String(n+1).padStart(2,'0')}</td><td><input class="name-input" aria-label="Item ${n+1} name" value="${escape(i.name)}" placeholder="Item name" maxlength="500"></td><td><input class="qty-input" aria-label="Item ${n+1} required quantity" value="${escape(i.quantity)}" inputmode="numeric" placeholder="e.g. 10,000"></td><td><button class="remove" type="button" aria-label="Remove item ${n+1}" title="Remove item">×</button></td></tr>`).join(''):'<tr><td colspan="4" class="empty-row">Add an item or import a CSV list to begin.</td></tr>';
+  $('items-body').innerHTML=items.length?items.map((i,n)=>`<tr data-id="${i.id}"><td class="row-index">${String(n+1).padStart(2,'0')}</td><td><input class="name-input" aria-label="Item ${n+1} name" value="${escape(i.name)}" placeholder="Item name" maxlength="500"></td><td><input class="code-input" aria-label="Item ${n+1} variant code (optional)" value="${escape(i.code||'')}" placeholder="Optional" maxlength="500"></td><td><input class="qty-input" aria-label="Item ${n+1} required quantity" value="${escape(i.quantity)}" inputmode="numeric" placeholder="e.g. 10,000"></td><td><button class="remove" type="button" aria-label="Remove item ${n+1}" title="Remove item">×</button></td></tr>`).join(''):'<tr><td colspan="5" class="empty-row">Add an item or import a CSV list to begin.</td></tr>';
   $('add-item').disabled=items.length>=500;
+}
+function setItemsCollapsed(collapsed){
+  $('items-content').hidden=collapsed;
+  $('toggle-items').setAttribute('aria-expanded',String(!collapsed));
+  $('toggle-items').textContent=collapsed?'Edit items':'Minimise';
 }
 function settings(){
   return {makeReady:$('make-ready').value.trim()===''?0:Number($('make-ready').value),numberUp:Number($('number-up').value),maxLays:Number($('max-lays').value),materialCost:$('material-cost').value.trim()===''?NaN:Number($('material-cost').value),setupCost:$('setup-cost').value.trim()===''?NaN:Number($('setup-cost').value),allowSplit:$('allow-split').checked};
@@ -302,15 +316,15 @@ function calculate(){
   const id=requestId;
   let job,o;
   try {
-    job=items.map(i=>({name:i.name.trim(),quantity:parseQuantity(i.quantity)}));o=settings();validateJob(job,o);
-  }catch(e){$('calculation-error').textContent=e.message;$('calculation-error').hidden=false;$('results').innerHTML='';return;}
+    job=items.map(i=>({name:i.name.trim(),code:(i.code||'').trim(),quantity:parseQuantity(i.quantity)}));o=settings();validateJob(job,o);
+  }catch(e){setItemsCollapsed(false);$('calculation-error').textContent=e.message;$('calculation-error').hidden=false;$('results').innerHTML='';return;}
   $('calculation-error').hidden=true;$('results').innerHTML='<div class="empty-plan">Comparing allocations and costs…</div>';$('results').setAttribute('aria-busy','true');
   $('calculate-button').disabled=true;$('calculate-button').textContent='Comparing…';$('calculation-status').textContent='Comparing allocations and costs.';
   const finish=data=>{
     if(id!==requestId)return;
     stopCalculation();
     if(data.error){$('calculation-error').textContent=data.error;$('calculation-error').hidden=false;$('results').innerHTML='';return;}
-    result=data;selectedCount=result.recommendedCount;renderResults();$('calculation-status').textContent=`Comparison complete. Recommended ${result.recommendedCount} lays.`;
+    result=data;selectedCount=result.recommendedCount;renderResults();setItemsCollapsed(true);$('results-heading').focus({preventScroll:true});$('results-heading').scrollIntoView({behavior:'auto',block:'start'});$('calculation-status').textContent=`Comparison complete. Recommended ${result.recommendedCount} lays.`;
   };
   // Blob workers keep both downloaded files and static-hosted pages responsive.
   try {
@@ -330,7 +344,7 @@ function layBreakdowns(data,plan){
   return plan.lays.map(lay=>({sheets:lay.sheets,makeReady:data.settings.makeReady||0,totalSheets:lay.sheets+(data.settings.makeReady||0),rows:lay.allocations.map(a=>{
     const produced=a.positions*lay.sheets,quantity=Math.min(remaining[a.item],produced);
     remaining[a.item]-=quantity;
-    return {...a,name:data.items[a.item].name,quantity,produced,overs:produced-quantity};
+    return {...a,name:data.items[a.item].name,code:data.items[a.item].code||'',quantity,produced,overs:produced-quantity};
   })}));
 }
 function zipStore(entries){
@@ -363,7 +377,7 @@ function buildLayXlsx(data,count){
     const start=row;
     for(const a of lay.rows){
       const needed=Math.ceil(a.quantity/a.positions);
-      add(row,cell('A',row,a.name)+cell('B',row,null,7)+cell('C',row,a.quantity)+cell('D',row,a.positions)+cell('E',row,needed,6,`ROUNDUP(C${row}/D${row},0)`)+cell('F',row,null,5)+cell('G',row,null,5),Math.max(24,Math.ceil(a.name.length/28)*15));row++;
+      add(row,cell('A',row,a.name)+cell('B',row,a.code||null,7)+cell('C',row,a.quantity)+cell('D',row,a.positions)+cell('E',row,needed,6,`ROUNDUP(C${row}/D${row},0)`)+cell('F',row,null,5)+cell('G',row,null,5),Math.max(24,Math.ceil(a.name.length/28)*15));row++;
     }
     const last=row-1;row++; // Template spacer before lay totals.
     const totals=[['NUMBER UP TOTAL',lay.rows.reduce((s,a)=>s+a.positions,0),`SUM(D${start}:D${last})`],['MIN SHEETS REQUIRED FOR LAY',lay.sheets,`MAX(E${start}:E${last},${lay.sheets})`],['TOTAL NUMBER OF SHEETS SUPPLIED (INC M/READY)',lay.totalSheets,`E${row+1}+${lay.makeReady}`]];
@@ -379,7 +393,7 @@ function exportLayXlsx(){
     if(!result)throw Error('Compare lays and select an option before exporting.');
     const bytes=buildLayXlsx(result,selectedCount),url=URL.createObjectURL(new Blob([bytes],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
     const a=document.createElement('a');a.href=url;a.download=`Imposition-${selectedCount}-lays.xlsx`;a.click();setTimeout(()=>URL.revokeObjectURL(url),60000);
-    $('calculation-status').textContent='XLSX exported. Variant Code, Final Quantity and No. of Boxes are blank for manual entry.';
+    $('calculation-status').textContent='XLSX exported. Variant codes included where supplied. Final Quantity and No. of Boxes remain blank for manual entry.';
   }catch(e){$('calculation-error').textContent=e.message;$('calculation-error').hidden=false;}
 }
 
@@ -455,15 +469,16 @@ function renderResults(){
   <div class="plan-panel"><div class="panel-heading"><h3>Combined production totals</h3></div><div class="table-scroll"><table class="plan-table"><thead><tr><th>Item</th><th>Required</th><th>Lay(s)</th><th>Produced</th><th>Overs</th></tr></thead><tbody>${rows.map((v,i)=>`<tr><td><span class="item-label"><span class="swatch" style="--item-color:${colours[i%colours.length]}"></span>${i+1}. ${escape(v.name)}</span></td><td>${fmt(v.quantity)}</td><td>${v.where.join(', ')}</td><td>${fmt(v.produced)}</td><td>${fmt(v.overs)}</td></tr>`).join('')}</tbody><tfoot><tr><td>Total</td><td>${fmt(result.required)}</td><td>${r.count}</td><td>${fmt(result.required+r.overs)}</td><td>${fmt(r.overs)}</td></tr></tfoot></table></div></div>
   ${layPanels}<p class="cost-footnote">Material: production + make-ready sheets, divided by 1,000 × ${money(result.settings.materialCost)}. Extra setups: (lays − 1) × ${money(result.settings.setupCost)}. Material is charged proportionally, not rounded to packs of 1,000. Includes make-ready material. Excludes the first setup charge, other spoilage and other running costs. Equal-cost options favour fewer lays.</p>`;
 }
-$('items-body').addEventListener('input',e=>{const row=e.target.closest('[data-id]');if(!row)return;const item=items.find(i=>i.id===Number(row.dataset.id));item[e.target.classList.contains('qty-input')?'quantity':'name']=e.target.value;invalidate();});
+$('items-body').addEventListener('input',e=>{const row=e.target.closest('[data-id]');if(!row)return;const item=items.find(i=>i.id===Number(row.dataset.id));item[e.target.classList.contains('qty-input')?'quantity':e.target.classList.contains('code-input')?'code':'name']=e.target.value;invalidate();});
 $('items-body').addEventListener('click',e=>{const button=e.target.closest('.remove');if(!button)return;const index=items.findIndex(i=>i.id===Number(button.closest('[data-id]').dataset.id));items.splice(index,1);drawItems();invalidate();const buttons=$('items-body').querySelectorAll('.remove');(buttons[Math.min(index,buttons.length-1)]||$('add-item')).focus();});
-$('add-item').addEventListener('click',()=>{if(items.length>=500)return;items.push({id:nextId++,name:'',quantity:''});drawItems();invalidate();$('items-body').lastElementChild.querySelector('input').focus();});
+$('add-item').addEventListener('click',()=>{if(items.length>=500)return;items.push({id:nextId++,name:'',code:'',quantity:''});drawItems();invalidate();$('items-body').lastElementChild.querySelector('input').focus();});
 for(const id of ['number-up','make-ready','material-cost','setup-cost','max-lays','allow-split'])$(id).addEventListener('input',invalidate);
 $('calculate-button').addEventListener('click',calculate);
+$('toggle-items').addEventListener('click',()=>setItemsCollapsed(!$('items-content').hidden));
 $('results').addEventListener('click',e=>{if(e.target.closest('[data-export-xlsx]')){exportLayXlsx();return;}if(e.target.closest('[data-export-report]')){exportA4Report();return;}const button=e.target.closest('[data-plan]');if(!button)return;selectedCount=Number(button.dataset.plan);renderResults();$('results').querySelector(`[data-plan="${selectedCount}"]`).focus();});
 $('import-button').addEventListener('click',()=>$('csv-file').click());
 $('csv-file').addEventListener('change',async e=>{
-  const file=e.target.files[0];if(!file)return;
+  const file=e.target.files[0];if(!file)return;setItemsCollapsed(false);
   const button=$('import-button');button.disabled=true;
   try {
     if(file.size>5*1024*1024)throw Error('Choose a CSV file smaller than 5 MB.');
@@ -479,9 +494,9 @@ if(context?.registerTool){
   const lifecycle=new AbortController();
   const register=tool=>{try{Promise.resolve(context.registerTool(tool,{signal:lifecycle.signal})).catch(()=>{});}catch{}};
   register({name:'read_imposition_plan',description:'Read the current lay cost comparison, allocations, or validation status.',inputSchema:{type:'object',properties:{},additionalProperties:false},annotations:{readOnlyHint:true,untrustedContentHint:true},execute:()=>result||{status:$('calculation-status').textContent,error:$('calculation-error').hidden?null:$('calculation-error').textContent}});
-  register({name:'set_imposition_job',description:'Replace items and number-up, retaining the visible cost and splitting settings. Calculate if all inputs are valid.',inputSchema:{type:'object',properties:{numberUp:{type:'integer',minimum:1,maximum:100},items:{type:'array',minItems:1,maxItems:500,items:{type:'object',properties:{name:{type:'string',minLength:1},quantity:{type:'integer',minimum:1,maximum:1000000000}},required:['name','quantity'],additionalProperties:false}}},required:['numberUp','items'],additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:true},execute:input=>{
+  register({name:'set_imposition_job',description:'Replace items and number-up, retaining the visible cost and splitting settings. Calculate if all inputs are valid.',inputSchema:{type:'object',properties:{numberUp:{type:'integer',minimum:1,maximum:100},items:{type:'array',minItems:1,maxItems:500,items:{type:'object',properties:{name:{type:'string',minLength:1},code:{type:'string',maxLength:500},quantity:{type:'integer',minimum:1,maximum:1000000000}},required:['name','quantity'],additionalProperties:false}}},required:['numberUp','items'],additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:true},execute:input=>{
     validateJob(input.items,{numberUp:input.numberUp,maxLays:500,materialCost:0,setupCost:300});
-    items=input.items.map(i=>({name:i.name,quantity:String(i.quantity),id:nextId++}));$('number-up').value=String(input.numberUp);drawItems();calculate();return {status:'Job entered. Read the plan after the calculation completes.',error:$('calculation-error').hidden?null:$('calculation-error').textContent};
+    items=input.items.map(i=>({name:i.name,code:i.code||'',quantity:String(i.quantity),id:nextId++}));$('number-up').value=String(input.numberUp);drawItems();calculate();return {status:'Job entered. Read the plan after the calculation completes.',error:$('calculation-error').hidden?null:$('calculation-error').textContent};
   }});
   window.addEventListener('pagehide',()=>{lifecycle.abort();stopCalculation();},{once:true});
 }
