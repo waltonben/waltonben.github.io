@@ -12,11 +12,12 @@ import {
   type WorkerResponse,
 } from "./messages"
 import { preflightPdf } from "./preflight"
+import { calculateInkCoverage } from "./coverage"
 
 const MAX_RENDER_PIXELS = 30_000_000
 const MAX_PAGE_POINTS = 50_000
-const MIN_CSS_WIDTH = 240
-const MAX_CSS_WIDTH = 2_400
+const MIN_CSS_HEIGHT = 120
+const MAX_CSS_HEIGHT = 2_400
 const MAX_PIXEL_RATIO = 2.5
 const POINTS_PER_INCH = 72
 const MILLIMETRES_PER_INCH = 25.4
@@ -220,8 +221,11 @@ function renderPage(request: Extract<WorkerRequest, { type: "RENDER_PAGE" }>) {
   try {
     page = activeDocument.loadPage(request.pageIndex)
     const pageSize = getPageSize(page)
-    const cssWidth = Math.min(MAX_CSS_WIDTH, Math.max(MIN_CSS_WIDTH, request.targetCssWidth))
-    const cssHeight = cssWidth * (pageSize.heightPoints / pageSize.widthPoints)
+    const cssHeight = Math.min(
+      MAX_CSS_HEIGHT,
+      Math.max(MIN_CSS_HEIGHT, request.targetCssHeight),
+    )
+    const cssWidth = cssHeight * (pageSize.widthPoints / pageSize.heightPoints)
     const pixelRatio = Math.min(MAX_PIXEL_RATIO, Math.max(1, request.pixelRatio))
 
     let pixelWidth = cssWidth * pixelRatio
@@ -307,6 +311,19 @@ function preflightDocument(request: Extract<WorkerRequest, { type: "PREFLIGHT_DO
     })
     activePreflight = preflight
     post({ type: "PREFLIGHT_COMPLETED", requestId: request.requestId, preflight })
+    try {
+      const coverage = calculateInkCoverage(activeDocumentId, activeDocument, preflight)
+      post({ type: "INK_COVERAGE_COMPLETED", requestId: request.requestId, coverage })
+    } catch (error) {
+      post(
+        errorResponse(
+          error instanceof Error ? error.message : "MuPDF could not calculate ink coverage.",
+          "coverage",
+          "COVERAGE_FAILED",
+          request.requestId,
+        ),
+      )
+    }
   } catch (error) {
     post(
       errorResponse(

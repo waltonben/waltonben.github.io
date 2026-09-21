@@ -1,10 +1,13 @@
-import type { ColorSample, DocumentPreflight } from "../worker/messages"
+import type { ColorSample, DocumentPreflight, InkCoverageReport } from "../worker/messages"
 
 type PreflightPanelProps = {
   status: "idle" | "running" | "ready" | "error"
   progress: { completedPages: number; totalPages: number } | null
   preflight: DocumentPreflight | null
   error: string | null
+  coverageStatus: "idle" | "loading" | "ready" | "error"
+  coverage: InkCoverageReport | null
+  coverageError: string | null
   sampleStatus: "idle" | "loading" | "ready" | "error"
   sample: ColorSample | null
   sampleError: string | null
@@ -30,6 +33,9 @@ export function PreflightPanel({
   progress,
   preflight,
   error,
+  coverageStatus,
+  coverage,
+  coverageError,
   sampleStatus,
   sample,
   sampleError,
@@ -61,6 +67,24 @@ export function PreflightPanel({
   }
 
   const primaryIntent = preflight.outputIntents[0]
+  const coverageByName = new Map(coverage?.channels.map((channel) => [channel.name, channel]))
+  const coverageMeta = (name: string, type: string) => {
+    const channel = coverageByName.get(name)
+    const value = channel ? `${valueFormatter.format(channel.coveragePercent)}%` : "—"
+    return (
+      <small
+        className="ink-row__meta"
+        title={
+          channel
+            ? `${valueFormatter.format(channel.solidAreaSquareMillimetres)} mm² equivalent solid area`
+            : undefined
+        }
+      >
+        <strong>{value}</strong>
+        <span>{type}</span>
+      </small>
+    )
+  }
   const profileLabel =
     primaryIntent?.profileName ??
     primaryIntent?.info ??
@@ -71,7 +95,7 @@ export function PreflightPanel({
     <>
       <div className="sidebar__section">
         <div className="section-heading">
-          <span className="section-label">Color profile</span>
+          <span className="section-label">Colour profile</span>
           <span className={`model-badge model-badge--${preflight.classification.toLowerCase()}`}>
             {preflight.classification}
           </span>
@@ -93,27 +117,37 @@ export function PreflightPanel({
         {preflight.pdfStandard && (
           <div className="pdf-standard-badge">Declared {preflight.pdfStandard}</div>
         )}
-        <div className="color-space-list" aria-label="Observed color spaces">
-          {preflight.colorSpaces.map((colorSpace) => (
-            <span
-              className="color-space-pill"
-              key={`${colorSpace.name}-${colorSpace.type}-${colorSpace.components}`}
-              title={`${colorSpace.occurrences} interpreted drawing operations`}
-            >
-              {colorSpace.name}
-            </span>
-          ))}
-        </div>
+        {preflight.colorSpaces.length > 0 && (
+          <details className="profile-more-info">
+            <summary>More info</summary>
+            <div className="color-space-list" aria-label="Observed colour spaces">
+              {preflight.colorSpaces.map((colorSpace) => (
+                <span
+                  className="color-space-pill"
+                  key={`${colorSpace.name}-${colorSpace.type}-${colorSpace.components}`}
+                  title={`${colorSpace.occurrences} interpreted drawing operations`}
+                >
+                  {colorSpace.name}
+                </span>
+              ))}
+            </div>
+          </details>
+        )}
       </div>
 
       <div className="sidebar__section">
-        <span className="section-label">Separations</span>
+        <div className="section-heading">
+          <span className="section-label">Separations</span>
+          <span className="coverage-heading">
+            {coverageStatus === "loading" ? "Calculating…" : "Coverage"}
+          </span>
+        </div>
         <div className="ink-list">
           {preflight.processColors.map((name) => (
             <div className="ink-row" key={name}>
               <span className={processClass(name)} aria-hidden="true" />
               <span>{name}</span>
-              <small>Process</small>
+              {coverageMeta(name, "Process")}
             </div>
           ))}
           {preflight.spotColors.map((spot) => (
@@ -130,10 +164,22 @@ export function PreflightPanel({
               <span title={spot.alternateSpace ? `Alternate: ${spot.alternateSpace}` : undefined}>
                 {spot.name}
               </span>
-              <small>{spot.status === "used" ? spot.role : "Declared"}</small>
+              {coverageMeta(
+                spot.name,
+                spot.status === "used" ? spot.role : "Declared",
+              )}
             </div>
           ))}
         </div>
+        {coverageStatus === "ready" && coverage && (
+          <p className="coverage-note">
+            Page {coverage.pageIndex + 1} mean tint at {coverage.dpi} dpi. Hover a value for
+            equivalent solid area.
+          </p>
+        )}
+        {coverageStatus === "error" && coverageError && (
+          <p className="inline-error coverage-error">{coverageError}</p>
+        )}
       </div>
 
       <div className="sidebar__section">

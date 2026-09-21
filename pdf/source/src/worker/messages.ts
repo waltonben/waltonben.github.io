@@ -50,6 +50,21 @@ export type SpotColorInfo = {
   role: "ink" | "technical"
 }
 
+export type InkCoverageChannel = {
+  name: string
+  kind: "process" | "spot" | "technical"
+  coveragePercent: number
+  solidAreaSquareMillimetres: number
+}
+
+export type InkCoverageReport = {
+  documentId: string
+  pageIndex: number
+  dpi: number
+  channels: InkCoverageChannel[]
+  notes: string[]
+}
+
 export type DocumentPreflight = {
   documentId: string
   classification: ColorModel
@@ -90,7 +105,7 @@ export type RenderPageRequest = {
   requestId: number
   documentId: string
   pageIndex: number
-  targetCssWidth: number
+  targetCssHeight: number
   pixelRatio: number
 }
 
@@ -170,10 +185,16 @@ export type ColorSampledResponse = {
   sample: ColorSample
 }
 
+export type InkCoverageCompletedResponse = {
+  type: "INK_COVERAGE_COMPLETED"
+  requestId: number
+  coverage: InkCoverageReport
+}
+
 export type WorkerErrorResponse = {
   type: "WORKER_ERROR"
   requestId?: number
-  scope: "worker" | "document" | "render" | "preflight" | "sample"
+  scope: "worker" | "document" | "render" | "preflight" | "sample" | "coverage"
   code:
     | "INVALID_FILE"
     | "PASSWORD_REQUIRED"
@@ -183,6 +204,7 @@ export type WorkerErrorResponse = {
     | "RENDER_FAILED"
     | "PREFLIGHT_FAILED"
     | "SAMPLE_FAILED"
+    | "COVERAGE_FAILED"
     | "UNKNOWN"
   message: string
 }
@@ -194,5 +216,6 @@ export type WorkerResponse =
   | PreflightProgressResponse
   | PreflightCompletedResponse
   | ColorSampledResponse
+  | InkCoverageCompletedResponse
   | DocumentClosedResponse
   | WorkerErrorResponse

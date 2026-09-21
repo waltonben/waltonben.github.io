@@ -4,6 +4,7 @@ import {
   type ColorSample,
   type DocumentPreflight,
   type DocumentSummary,
+  type InkCoverageReport,
   type WorkerRequest,
   type WorkerResponse,
 } from "../worker/messages"
@@ -29,6 +30,9 @@ type PdfWorkerState = {
   preflight: DocumentPreflight | null
   preflightProgress: { completedPages: number; totalPages: number } | null
   preflightError: string | null
+  coverageStatus: "idle" | "loading" | "ready" | "error"
+  coverage: InkCoverageReport | null
+  coverageError: string | null
   sampleStatus: "idle" | "loading" | "ready" | "error"
   sample: ColorSample | null
   sampleError: string | null
@@ -43,6 +47,9 @@ const initialState: PdfWorkerState = {
   preflight: null,
   preflightProgress: null,
   preflightError: null,
+  coverageStatus: "idle",
+  coverage: null,
+  coverageError: null,
   sampleStatus: "idle",
   sample: null,
   sampleError: null,
@@ -135,6 +142,21 @@ export function usePdfWorker() {
               preflight: response.preflight,
               preflightProgress: null,
               preflightError: null,
+              coverageStatus: "loading",
+              coverage: null,
+              coverageError: null,
+            }
+          })
+          break
+        case "INK_COVERAGE_COMPLETED":
+          if (response.requestId !== newestPreflightRequestRef.current) return
+          setState((current) => {
+            if (current.document?.documentId !== response.coverage.documentId) return current
+            return {
+              ...current,
+              coverageStatus: "ready",
+              coverage: response.coverage,
+              coverageError: null,
             }
           })
           break
@@ -167,6 +189,15 @@ export function usePdfWorker() {
               ...current,
               sampleStatus: "error",
               sampleError: response.message,
+            }))
+            return
+          }
+          if (response.scope === "coverage") {
+            if (response.requestId !== newestPreflightRequestRef.current) return
+            setState((current) => ({
+              ...current,
+              coverageStatus: "error",
+              coverageError: response.message,
             }))
             return
           }
@@ -298,7 +329,7 @@ export function usePdfWorker() {
   )
 
   const renderPage = useCallback(
-    (pageIndex: number, targetCssWidth: number, pixelRatio: number) => {
+    (pageIndex: number, targetCssHeight: number, pixelRatio: number) => {
       const document = state.document
       if (!document) return
 
@@ -310,7 +341,7 @@ export function usePdfWorker() {
         requestId,
         documentId: document.documentId,
         pageIndex,
-        targetCssWidth,
+        targetCssHeight,
         pixelRatio,
       })
     },

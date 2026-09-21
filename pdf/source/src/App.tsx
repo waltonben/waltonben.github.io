@@ -22,6 +22,9 @@ function App() {
     preflightProgress,
     preflight,
     preflightError,
+    coverageStatus,
+    coverage,
+    coverageError,
     sampleStatus,
     sample,
     sampleError,
@@ -31,25 +34,25 @@ function App() {
     sampleColor,
     closeDocument,
   } = usePdfWorker()
-  const workspaceRef = useRef<HTMLDivElement>(null)
-  const [viewportWidth, setViewportWidth] = useState(0)
+  const canvasViewportRef = useRef<HTMLDivElement>(null)
+  const [viewportHeight, setViewportHeight] = useState(0)
   const [sampleMarker, setSampleMarker] = useState<{ x: number; y: number } | null>(null)
 
   useEffect(() => {
-    const element = workspaceRef.current
+    const element = canvasViewportRef.current
     if (!element) return
 
     const observer = new ResizeObserver(([entry]) => {
-      setViewportWidth(Math.max(320, entry.contentRect.width - 72))
+      setViewportHeight(Math.max(120, Math.floor(entry.contentRect.height)))
     })
     observer.observe(element)
     return () => observer.disconnect()
   }, [document])
 
   useEffect(() => {
-    if (!document || viewportWidth === 0) return
-    renderPage(0, Math.min(1_400, viewportWidth), window.devicePixelRatio || 1)
-  }, [document, renderPage, viewportWidth])
+    if (!document || viewportHeight === 0) return
+    renderPage(0, viewportHeight, window.devicePixelRatio || 1)
+  }, [document, renderPage, viewportHeight])
 
   useEffect(() => {
     if (!document) return
@@ -132,6 +135,9 @@ function App() {
               progress={preflightProgress}
               preflight={preflight}
               error={preflightError}
+              coverageStatus={coverageStatus}
+              coverage={coverage}
+              coverageError={coverageError}
               sampleStatus={sampleStatus}
               sample={sample}
               sampleError={sampleError}
@@ -145,12 +151,12 @@ function App() {
             </div>
           </aside>
 
-          <div className="workspace" ref={workspaceRef}>
+          <div className="workspace">
             <div className="workspace__toolbar">
               <span>Page 1 of {document.pageCount}</span>
               <span className={`render-status render-status--${status}`}>{statusText}</span>
             </div>
-            <div className="canvas-viewport">
+            <div className="canvas-viewport" ref={canvasViewportRef}>
               {renderedPage && (
                 <div
                   className={`canvas-stack ${preflightStatus === "ready" ? "canvas-stack--inspectable" : ""}`}

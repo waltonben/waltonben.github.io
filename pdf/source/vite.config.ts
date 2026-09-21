@@ -1,10 +1,7 @@
 import { defineConfig } from "vite"
 import react from "@vitejs/plugin-react"
 
-export default defineConfig(({ command }) => ({
-  // The production build is served from waltonben.github.io/pdf/.
-  // Development stays rooted at / so the local preview URL is unchanged.
-  base: command === "build" ? "/pdf/" : "/",
+export default defineConfig({
   plugins: [react()],
   optimizeDeps: {
     // MuPDF's Emscripten loader resolves its WASM binary relative to the JS
@@ -19,4 +16,4 @@ export default defineConfig(({ command }) => ({
   worker: {
     format: "es",
   },
-}))
+})

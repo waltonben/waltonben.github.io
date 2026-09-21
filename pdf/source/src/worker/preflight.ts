@@ -141,7 +141,7 @@ function inspectOutputIntent(intent: mupdf.PDFObject): OutputIntentInfo {
   }
 }
 
-function parseSeparationName(colorSpaceName: string) {
+export function parseSeparationName(colorSpaceName: string) {
   const opening = colorSpaceName.indexOf("(")
   if (opening < 0 || !colorSpaceName.endsWith(")")) return { names: [] as string[] }
   const kind = colorSpaceName.slice(0, opening)

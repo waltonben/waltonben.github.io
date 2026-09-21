@@ -2,7 +2,7 @@
 
 Pressproof is a local-first pre-press PDF workspace built with React, TypeScript, Web Workers, WebAssembly, and MuPDF.js.
 
-The production build is configured for deployment at `/pdf/` on the `waltonben.github.io` GitHub Pages site. Local development continues to run from `/`.
+Local development and preview builds run from `/`. To prepare a GitHub Pages build for the existing `/pdf/` subdirectory, use `npm run build -- --base /pdf/`.
 
 ## Implemented milestones
 
@@ -27,7 +27,15 @@ The production build is configured for deployment at `/pdf/` on the `waltonben.g
 - Warnings for RGB-only process artwork and named separations with RGB alternate color spaces.
 - Click-to-sample rendered CMYK or RGB channel values and physical page coordinates.
 
-Coverage analysis, separation visibility, overprint controls, the Konva measurement layer, and report generation are intentionally reserved for later milestones.
+### Milestone 3 — ink coverage (first slice)
+
+- Worker-side page-one coverage analysis at 72 dpi.
+- Mean tint percentage for every CMYK, spot, and technical separation.
+- Equivalent 100% solid-ink area in square millimetres.
+- Coverage values shown alongside the existing process-first separation list.
+- Deterministic cleanup of MuPDF callback objects so analysis cannot invalidate the active document.
+
+The current named-ink analysis covers vector paths and text. Gradient/shading spot plates, image-based marks, and multichannel spot images need the planned lower-level separation API. Separation visibility, overprint controls, the Konva measurement layer, and report generation remain for the following slices.
 
 ## Run locally
 
