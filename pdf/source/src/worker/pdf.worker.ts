@@ -13,6 +13,12 @@ import {
 } from "./messages"
 import { preflightPdf } from "./preflight"
 import { calculateInkCoverage } from "./coverage"
+import {
+  composeSeparationPreview,
+  createSeparationPreviewCache,
+  destroySeparationPreviewCache,
+  type SeparationPreviewCache,
+} from "./separation-preview"
 
 const MAX_RENDER_PIXELS = 30_000_000
 const MAX_PAGE_POINTS = 50_000
@@ -26,6 +32,7 @@ const SAMPLE_DPI = 144
 let activeDocument: mupdf.Document | null = null
 let activeDocumentId: string | null = null
 let activePreflight: DocumentPreflight | null = null
+let separationPreviewCache: SeparationPreviewCache | null = null
 let sampleCache:
   | {
       documentId: string
@@ -52,6 +59,8 @@ function errorResponse(
 function closeActiveDocument() {
   sampleCache?.pixmap.destroy()
   sampleCache = null
+  destroySeparationPreviewCache(separationPreviewCache)
+  separationPreviewCache = null
   activePreflight = null
   activeDocument?.destroy()
   activeDocument = null
@@ -239,12 +248,39 @@ function renderPage(request: Extract<WorkerRequest, { type: "RENDER_PAGE" }>) {
     }
 
     const renderScale = pixelWidth / pageSize.widthPoints
-    pixmap = page.toPixmap(
-      mupdf.Matrix.scale(renderScale, renderScale),
-      mupdf.ColorSpace.DeviceRGB,
-      false,
-      true,
-    )
+    const separationPreview = request.hiddenSeparations.length > 0
+    if (separationPreview) {
+      if (!activePreflight) {
+        throw new Error("Separation controls are not ready until preflight completes.")
+      }
+      const cacheMatches =
+        separationPreviewCache?.documentId === activeDocumentId &&
+        separationPreviewCache.pageIndex === request.pageIndex &&
+        Math.abs(separationPreviewCache.renderScale - renderScale) < 0.000001
+
+      if (!cacheMatches) {
+        destroySeparationPreviewCache(separationPreviewCache)
+        separationPreviewCache = createSeparationPreviewCache(
+          activeDocumentId,
+          page,
+          request.pageIndex,
+          renderScale,
+          activePreflight,
+        )
+      }
+      pixmap = composeSeparationPreview(
+        separationPreviewCache!,
+        activePreflight,
+        request.hiddenSeparations,
+      )
+    } else {
+      pixmap = page.toPixmap(
+        mupdf.Matrix.scale(renderScale, renderScale),
+        mupdf.ColorSpace.DeviceRGB,
+        false,
+        true,
+      )
+    }
 
     const rgba = copyRgbPixmapToRgba(pixmap)
     const response: PageRenderedResponse = {
@@ -257,6 +293,7 @@ function renderPage(request: Extract<WorkerRequest, { type: "RENDER_PAGE" }>) {
       cssWidth,
       cssHeight,
       renderScale,
+      separationPreview,
       pixels: rgba.buffer,
     }
 

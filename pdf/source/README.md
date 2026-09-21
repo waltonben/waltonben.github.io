@@ -27,15 +27,19 @@ Local development and preview builds run from `/`. To prepare a GitHub Pages bui
 - Warnings for RGB-only process artwork and named separations with RGB alternate color spaces.
 - Click-to-sample rendered CMYK or RGB channel values and physical page coordinates.
 
-### Milestone 3 — ink coverage (first slice)
+### Milestone 3 — ink coverage and separation preview
 
 - Worker-side page-one coverage analysis at 72 dpi.
 - Mean tint percentage for every CMYK, spot, and technical separation.
 - Equivalent 100% solid-ink area in square millimetres.
 - Coverage values shown alongside the existing process-first separation list.
 - Deterministic cleanup of MuPDF callback objects so analysis cannot invalidate the active document.
+- Per-separation visibility controls for process, spot, and technical inks.
+- One-click Solo isolation and Show all reset controls.
+- Worker-side process/spot plate caching at the current render scale for responsive repeated toggles.
+- Clear filtered-proof state with composite pixel sampling paused until all inks are restored.
 
-The current named-ink analysis covers vector paths and text. Gradient/shading spot plates, image-based marks, and multichannel spot images need the planned lower-level separation API. Separation visibility, overprint controls, the Konva measurement layer, and report generation remain for the following slices.
+The current named-ink analysis covers vector paths, text, and image masks. Gradient/shading spot plates and multichannel spot images need the planned lower-level separation API. Filtered views are plate previews rather than production overprint simulation; overprint controls, the Konva measurement layer, and report generation remain for the following slices.
 
 ## Run locally
 

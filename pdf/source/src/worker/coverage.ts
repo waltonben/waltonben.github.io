@@ -29,13 +29,23 @@ function releaseAfter<T>(objects: Disposable[], work: () => T): T {
   }
 }
 
-function renderProcessPlates(page: mupdf.Page, matrix: mupdf.Matrix) {
-  const pixmap = new mupdf.Pixmap(mupdf.ColorSpace.DeviceCMYK, rasterBounds(page, matrix), false)
-  pixmap.clear(0)
+export function renderProcessPlates(
+  page: mupdf.Page,
+  matrix: mupdf.Matrix,
+  withAlpha = false,
+) {
+  const pixmap = new mupdf.Pixmap(
+    mupdf.ColorSpace.DeviceCMYK,
+    rasterBounds(page, matrix),
+    withAlpha,
+  )
+  // MuPDF's CMYK clear value is paper luminance, not raw channel bytes:
+  // 255 produces 0/0/0/0 (white paper), while 0 produces a 100% Black backdrop.
+  pixmap.clear(255)
   const draw = new mupdf.DrawDevice(mupdf.Matrix.identity, pixmap)
 
   const paint = (
-    method: "fillPath" | "strokePath" | "fillText" | "strokeText",
+    method: "fillPath" | "strokePath" | "fillText" | "strokeText" | "fillImageMask",
     args: unknown[],
     colorSpace: mupdf.ColorSpace,
     color: number[],
@@ -71,6 +81,21 @@ function renderProcessPlates(page: mupdf.Page, matrix: mupdf.Matrix) {
     clipStrokeText: (text, stroke, ctm) =>
       releaseAfter([text, stroke], () => draw.clipStrokeText(text, stroke, ctm)),
     ignoreText: (text, ctm) => releaseAfter([text], () => draw.ignoreText(text, ctm)),
+    fillImage: (image, ctm, alpha) =>
+      releaseAfter([image], () => {
+        const colorSpace = image.getColorSpace()
+        try {
+          if (!isNamedSeparation(colorSpace)) draw.fillImage(image, ctm, alpha)
+        } finally {
+          colorSpace?.destroy()
+        }
+      }),
+    fillImageMask: (image, ctm, colorSpace, color, alpha) =>
+      releaseAfter([image, colorSpace], () =>
+        paint("fillImageMask", [image, ctm], colorSpace, color, alpha),
+      ),
+    clipImageMask: (image, ctm) =>
+      releaseAfter([image], () => draw.clipImageMask(image, ctm)),
     popClip: () => draw.popClip(),
     beginMask: (bounds, luminosity, colorSpace, color) =>
       releaseAfter([colorSpace], () =>
@@ -110,13 +135,13 @@ function renderProcessPlates(page: mupdf.Page, matrix: mupdf.Matrix) {
   }
 }
 
-function renderSpotPlate(page: mupdf.Page, matrix: mupdf.Matrix, targetName: string) {
+export function renderSpotPlate(page: mupdf.Page, matrix: mupdf.Matrix, targetName: string) {
   const pixmap = new mupdf.Pixmap(mupdf.ColorSpace.DeviceGray, rasterBounds(page, matrix), false)
   pixmap.clear(255)
   const draw = new mupdf.DrawDevice(mupdf.Matrix.identity, pixmap)
 
   const paint = (
-    method: "fillPath" | "strokePath" | "fillText" | "strokeText",
+    method: "fillPath" | "strokePath" | "fillText" | "strokeText" | "fillImageMask",
     args: unknown[],
     colorSpace: mupdf.ColorSpace,
     color: number[],
@@ -154,6 +179,12 @@ function renderSpotPlate(page: mupdf.Page, matrix: mupdf.Matrix, targetName: str
     clipStrokeText: (text, stroke, ctm) =>
       releaseAfter([text, stroke], () => draw.clipStrokeText(text, stroke, ctm)),
     ignoreText: (text, ctm) => releaseAfter([text], () => draw.ignoreText(text, ctm)),
+    fillImageMask: (image, ctm, colorSpace, color, alpha) =>
+      releaseAfter([image, colorSpace], () =>
+        paint("fillImageMask", [image, ctm], colorSpace, color, alpha),
+      ),
+    clipImageMask: (image, ctm) =>
+      releaseAfter([image], () => draw.clipImageMask(image, ctm)),
     popClip: () => draw.popClip(),
     beginMask: (bounds, luminosity, colorSpace, color) =>
       releaseAfter([colorSpace], () =>
@@ -296,7 +327,7 @@ export function calculateInkCoverage(
     channels,
     notes: [
       "Coverage is the mean tint across the CropBox; solid-area values are equivalent 100% ink area.",
-      "Gradient/shading spot plates, image-based marks, and multichannel spot images require a future lower-level MuPDF separation API.",
+      "Gradient/shading spot plates and multichannel spot images require a future lower-level MuPDF separation API.",
     ],
   }
 }

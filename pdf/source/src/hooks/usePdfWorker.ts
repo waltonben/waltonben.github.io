@@ -18,6 +18,7 @@ type RenderedPage = {
   height: number
   cssWidth: number
   cssHeight: number
+  separationPreview: boolean
   pixels: Uint8ClampedArray<ArrayBuffer>
 }
 
@@ -113,6 +114,7 @@ export function usePdfWorker() {
                 height: response.height,
                 cssWidth: response.cssWidth,
                 cssHeight: response.cssHeight,
+                separationPreview: response.separationPreview,
                 pixels: new Uint8ClampedArray(response.pixels),
               },
             }
@@ -329,7 +331,12 @@ export function usePdfWorker() {
   )
 
   const renderPage = useCallback(
-    (pageIndex: number, targetCssHeight: number, pixelRatio: number) => {
+    (
+      pageIndex: number,
+      targetCssHeight: number,
+      pixelRatio: number,
+      hiddenSeparations: string[],
+    ) => {
       const document = state.document
       if (!document) return
 
@@ -343,6 +350,7 @@ export function usePdfWorker() {
         pageIndex,
         targetCssHeight,
         pixelRatio,
+        hiddenSeparations,
       })
     },
     [nextRequestId, post, state.document],

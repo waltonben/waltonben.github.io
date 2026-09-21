@@ -8,6 +8,11 @@ type PreflightPanelProps = {
   coverageStatus: "idle" | "loading" | "ready" | "error"
   coverage: InkCoverageReport | null
   coverageError: string | null
+  hiddenSeparations: string[]
+  separationPreviewActive: boolean
+  onToggleSeparation: (name: string) => void
+  onIsolateSeparation: (name: string) => void
+  onShowAllSeparations: () => void
   sampleStatus: "idle" | "loading" | "ready" | "error"
   sample: ColorSample | null
   sampleError: string | null
@@ -36,6 +41,11 @@ export function PreflightPanel({
   coverageStatus,
   coverage,
   coverageError,
+  hiddenSeparations,
+  separationPreviewActive,
+  onToggleSeparation,
+  onIsolateSeparation,
+  onShowAllSeparations,
   sampleStatus,
   sample,
   sampleError,
@@ -67,6 +77,7 @@ export function PreflightPanel({
   }
 
   const primaryIntent = preflight.outputIntents[0]
+  const hiddenSeparationNames = new Set(hiddenSeparations)
   const coverageByName = new Map(coverage?.channels.map((channel) => [channel.name, channel]))
   const coverageMeta = (name: string, type: string) => {
     const channel = coverageByName.get(name)
@@ -142,34 +153,82 @@ export function PreflightPanel({
             {coverageStatus === "loading" ? "Calculating…" : "Coverage"}
           </span>
         </div>
+        <div className="separation-toolbar">
+          <span>
+            {separationPreviewActive
+              ? `${hiddenSeparations.length} hidden`
+              : "All inks visible"}
+          </span>
+          <button
+            type="button"
+            disabled={!separationPreviewActive}
+            onClick={onShowAllSeparations}
+          >
+            Show all
+          </button>
+        </div>
         <div className="ink-list">
-          {preflight.processColors.map((name) => (
-            <div className="ink-row" key={name}>
-              <span className={processClass(name)} aria-hidden="true" />
-              <span>{name}</span>
-              {coverageMeta(name, "Process")}
-            </div>
-          ))}
-          {preflight.spotColors.map((spot) => (
-            <div className="ink-row" key={spot.name}>
-              <span
-                className="ink-swatch ink-swatch--spot"
-                style={spot.role === "ink" ? spotSwatchStyle(spot.previewColor) : undefined}
-                aria-hidden="true"
+          {preflight.processColors.map((name) => {
+            const isVisible = !hiddenSeparationNames.has(name)
+            return (
+              <div className={`ink-row ${isVisible ? "" : "ink-row--hidden"}`} key={name}>
+                <button
+                  className={processClass(name)}
+                  type="button"
+                  aria-label={`${isVisible ? "Hide" : "Show"} ${name} separation`}
+                  aria-pressed={isVisible}
+                  onClick={() => onToggleSeparation(name)}
+                />
+                <span>{name}</span>
+                <button
+                  className="ink-row__solo"
+                  type="button"
+                  aria-label={`Isolate ${name} separation`}
+                  onClick={() => onIsolateSeparation(name)}
+                >
+                  Solo
+                </button>
+                {coverageMeta(name, "Process")}
+              </div>
+            )
+          })}
+          {preflight.spotColors.map((spot) => {
+            const isVisible = !hiddenSeparationNames.has(spot.name)
+            return (
+              <div
+                className={`ink-row ${isVisible ? "" : "ink-row--hidden"}`}
+                key={spot.name}
               >
-                {spot.role === "ink" && spot.previewColor
-                  ? ""
-                  : spot.name.slice(0, 1).toUpperCase()}
-              </span>
-              <span title={spot.alternateSpace ? `Alternate: ${spot.alternateSpace}` : undefined}>
-                {spot.name}
-              </span>
-              {coverageMeta(
-                spot.name,
-                spot.status === "used" ? spot.role : "Declared",
-              )}
-            </div>
-          ))}
+                <button
+                  className="ink-swatch ink-swatch--spot"
+                  style={spot.role === "ink" ? spotSwatchStyle(spot.previewColor) : undefined}
+                  type="button"
+                  aria-label={`${isVisible ? "Hide" : "Show"} ${spot.name} separation`}
+                  aria-pressed={isVisible}
+                  onClick={() => onToggleSeparation(spot.name)}
+                >
+                  {spot.role === "ink" && spot.previewColor
+                    ? ""
+                    : spot.name.slice(0, 1).toUpperCase()}
+                </button>
+                <span title={spot.alternateSpace ? `Alternate: ${spot.alternateSpace}` : undefined}>
+                  {spot.name}
+                </span>
+                <button
+                  className="ink-row__solo"
+                  type="button"
+                  aria-label={`Isolate ${spot.name} separation`}
+                  onClick={() => onIsolateSeparation(spot.name)}
+                >
+                  Solo
+                </button>
+                {coverageMeta(
+                  spot.name,
+                  spot.status === "used" ? spot.role : "Declared",
+                )}
+              </div>
+            )
+          })}
         </div>
         {coverageStatus === "ready" && coverage && (
           <p className="coverage-note">
@@ -180,20 +239,29 @@ export function PreflightPanel({
         {coverageStatus === "error" && coverageError && (
           <p className="inline-error coverage-error">{coverageError}</p>
         )}
+        {separationPreviewActive && (
+          <p className="separation-preview-note">
+            Filtered plate preview. Production overprint simulation is the next stage.
+          </p>
+        )}
       </div>
 
       <div className="sidebar__section">
         <span className="section-label">Pixel breakdown</span>
-        {sampleStatus === "idle" && (
+        {separationPreviewActive ? (
+          <p className="helper-copy">Show all inks to sample the composite artwork.</p>
+        ) : sampleStatus === "idle" ? (
           <p className="helper-copy">Click the artwork to inspect its rendered channel values.</p>
-        )}
-        {sampleStatus === "loading" && (
+        ) : null}
+        {!separationPreviewActive && sampleStatus === "loading" && (
           <div className="sample-loading">
             <span className="spinner" /> Calculating channels…
           </div>
         )}
-        {sampleStatus === "error" && <p className="inline-error">{sampleError}</p>}
-        {sample && sampleStatus !== "loading" && (
+        {!separationPreviewActive && sampleStatus === "error" && (
+          <p className="inline-error">{sampleError}</p>
+        )}
+        {!separationPreviewActive && sample && sampleStatus !== "loading" && (
           <div className="sample-result">
             <div className="sample-coordinates">
               X {valueFormatter.format(sample.xMillimetres)} mm · Y{" "}

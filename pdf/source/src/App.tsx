@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { DropZone } from "./components/DropZone"
 import { PdfCanvas } from "./components/PdfCanvas"
 import { PreflightPanel } from "./components/PreflightPanel"
@@ -37,6 +37,15 @@ function App() {
   const canvasViewportRef = useRef<HTMLDivElement>(null)
   const [viewportHeight, setViewportHeight] = useState(0)
   const [sampleMarker, setSampleMarker] = useState<{ x: number; y: number } | null>(null)
+  const [hiddenSeparations, setHiddenSeparations] = useState<string[]>([])
+  const separationNames = useMemo(
+    () => [
+      ...(preflight?.processColors ?? []),
+      ...(preflight?.spotColors.map((spot) => spot.name) ?? []),
+    ],
+    [preflight],
+  )
+  const separationPreviewActive = hiddenSeparations.length > 0
 
   useEffect(() => {
     const element = canvasViewportRef.current
@@ -51,14 +60,39 @@ function App() {
 
   useEffect(() => {
     if (!document || viewportHeight === 0) return
-    renderPage(0, viewportHeight, window.devicePixelRatio || 1)
-  }, [document, renderPage, viewportHeight])
+    renderPage(
+      0,
+      viewportHeight,
+      window.devicePixelRatio || 1,
+      preflightStatus === "ready" ? hiddenSeparations : [],
+    )
+  }, [document, hiddenSeparations, preflightStatus, renderPage, viewportHeight])
 
   useEffect(() => {
     if (!document) return
     inspectDocument()
     setSampleMarker(null)
+    setHiddenSeparations([])
   }, [document, inspectDocument])
+
+  useEffect(() => {
+    setSampleMarker(null)
+  }, [hiddenSeparations])
+
+  const toggleSeparation = useCallback((name: string) => {
+    setHiddenSeparations((current) =>
+      current.includes(name) ? current.filter((item) => item !== name) : [...current, name],
+    )
+  }, [])
+
+  const isolateSeparation = useCallback(
+    (name: string) => {
+      setHiddenSeparations(separationNames.filter((item) => item !== name))
+    },
+    [separationNames],
+  )
+
+  const showAllSeparations = useCallback(() => setHiddenSeparations([]), [])
 
   const isBusy = status === "starting" || status === "loading"
   const statusText =
@@ -67,7 +101,9 @@ function App() {
       : status === "loading"
         ? "Opening PDF in the local worker…"
         : status === "rendering"
-          ? "Rendering page locally…"
+          ? separationPreviewActive
+            ? "Updating separation preview…"
+            : "Rendering page locally…"
           : "Processed locally in this browser"
 
   return (
@@ -138,6 +174,11 @@ function App() {
               coverageStatus={coverageStatus}
               coverage={coverage}
               coverageError={coverageError}
+              hiddenSeparations={hiddenSeparations}
+              separationPreviewActive={separationPreviewActive}
+              onToggleSeparation={toggleSeparation}
+              onIsolateSeparation={isolateSeparation}
+              onShowAllSeparations={showAllSeparations}
               sampleStatus={sampleStatus}
               sample={sample}
               sampleError={sampleError}
@@ -154,14 +195,19 @@ function App() {
           <div className="workspace">
             <div className="workspace__toolbar">
               <span>Page 1 of {document.pageCount}</span>
-              <span className={`render-status render-status--${status}`}>{statusText}</span>
+              <div className="workspace__status-group">
+                {separationPreviewActive && (
+                  <span className="separation-preview-badge">Filtered proof</span>
+                )}
+                <span className={`render-status render-status--${status}`}>{statusText}</span>
+              </div>
             </div>
             <div className="canvas-viewport" ref={canvasViewportRef}>
               {renderedPage && (
                 <div
-                  className={`canvas-stack ${preflightStatus === "ready" ? "canvas-stack--inspectable" : ""}`}
+                  className={`canvas-stack ${preflightStatus === "ready" && !separationPreviewActive ? "canvas-stack--inspectable" : ""}`}
                   onPointerDown={(event) => {
-                    if (preflightStatus !== "ready") return
+                    if (preflightStatus !== "ready" || separationPreviewActive) return
                     const bounds = event.currentTarget.getBoundingClientRect()
                     const x = Math.min(1, Math.max(0, (event.clientX - bounds.left) / bounds.width))
                     const y = Math.min(1, Math.max(0, (event.clientY - bounds.top) / bounds.height))

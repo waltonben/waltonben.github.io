@@ -107,6 +107,7 @@ export type RenderPageRequest = {
   pageIndex: number
   targetCssHeight: number
   pixelRatio: number
+  hiddenSeparations: string[]
 }
 
 export type CloseDocumentRequest = {
@@ -157,6 +158,7 @@ export type PageRenderedResponse = {
   cssWidth: number
   cssHeight: number
   renderScale: number
+  separationPreview: boolean
   pixels: ArrayBuffer
 }
 
