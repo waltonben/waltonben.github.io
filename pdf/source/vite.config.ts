@@ -2,6 +2,10 @@ import { defineConfig } from "vite"
 import react from "@vitejs/plugin-react"
 
 export default defineConfig({
+  // GitHub Pages serves this application from benwalton.co.uk/pdf/.
+  // Keeping the base path in source prevents production builds from
+  // accidentally emitting domain-root /assets URLs.
+  base: "/pdf/",
   plugins: [react()],
   optimizeDeps: {
     // MuPDF's Emscripten loader resolves its WASM binary relative to the JS
