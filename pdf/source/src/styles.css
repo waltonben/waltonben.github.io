@@ -369,6 +369,68 @@ button {
   font-size: 12px;
 }
 
+.page-controls,
+.zoom-controls {
+  display: flex;
+  align-items: center;
+}
+
+.page-controls {
+  gap: 14px;
+}
+
+.zoom-controls {
+  gap: 3px;
+}
+
+.zoom-controls button {
+  display: grid;
+  min-width: 27px;
+  height: 27px;
+  cursor: pointer;
+  place-items: center;
+  padding: 0 7px;
+  border: 1px solid #cbd7db;
+  border-radius: 6px;
+  color: #142c36;
+  background: white;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.zoom-controls button:hover:not(:disabled) {
+  border-color: #91a7ae;
+  background: #f2f5f6;
+}
+
+.zoom-controls button:focus-visible {
+  outline: 2px solid #4c6b76;
+  outline-offset: 1px;
+}
+
+.zoom-controls button:disabled {
+  cursor: default;
+  opacity: 0.38;
+}
+
+.zoom-controls .zoom-fit {
+  min-width: 36px;
+  margin-left: 3px;
+  font-size: 10px;
+}
+
+.zoom-controls .rotate-left {
+  margin-left: 7px;
+}
+
+.zoom-level {
+  min-width: 41px;
+  color: #607984;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
 .workspace__status-group {
   display: flex;
   gap: 12px;
@@ -408,12 +470,31 @@ button {
 
 .canvas-viewport {
   position: relative;
-  display: grid;
   min-height: 0;
   flex: 1;
   overflow: auto;
-  place-items: start center;
+  scrollbar-gutter: stable;
+}
+
+.canvas-stage {
+  display: grid;
+  width: max-content;
+  min-width: 100%;
+  height: max-content;
+  min-height: 100%;
+  place-items: center;
   padding: 36px;
+}
+
+.canvas-viewport--pan-ready,
+.canvas-viewport--pan-ready * {
+  cursor: grab !important;
+  user-select: none;
+}
+
+.canvas-viewport--panning,
+.canvas-viewport--panning * {
+  cursor: grabbing !important;
 }
 
 .canvas-stack {
@@ -969,9 +1050,6 @@ button {
     min-height: 70vh;
   }
 
-  .canvas-viewport {
-    padding: 24px;
-  }
 }
 
 @media (max-width: 540px) {
@@ -985,5 +1063,17 @@ button {
     width: 40px;
     justify-content: center;
     padding: 7px;
+  }
+
+  .workspace__toolbar {
+    padding: 0 12px;
+  }
+
+  .page-controls {
+    gap: 8px;
+  }
+
+  .render-status {
+    display: none;
   }
 }

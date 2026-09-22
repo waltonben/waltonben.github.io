@@ -1,5 +1,5 @@
 import * as mupdf from "mupdf"
-import type { DocumentPreflight } from "./messages"
+import type { DocumentPreflight, PageRotation } from "./messages"
 import { renderProcessPlates, renderSpotPlate } from "./coverage"
 
 type SpotPlate = {
@@ -11,6 +11,7 @@ export type SeparationPreviewCache = {
   documentId: string
   pageIndex: number
   renderScale: number
+  rotation: PageRotation
   process: mupdf.Pixmap
   spots: Map<string, SpotPlate>
 }
@@ -81,9 +82,13 @@ export function createSeparationPreviewCache(
   page: mupdf.Page,
   pageIndex: number,
   renderScale: number,
+  rotation: PageRotation,
   preflight: DocumentPreflight,
 ): SeparationPreviewCache {
-  const matrix = mupdf.Matrix.scale(renderScale, renderScale)
+  const matrix = mupdf.Matrix.concat(
+    mupdf.Matrix.scale(renderScale, renderScale),
+    mupdf.Matrix.rotate(rotation),
+  )
   const process = renderProcessPlates(page, matrix, true)
   const spots = new Map<string, SpotPlate>()
 
@@ -101,7 +106,7 @@ export function createSeparationPreviewCache(
     throw error
   }
 
-  return { documentId, pageIndex, renderScale, process, spots }
+  return { documentId, pageIndex, renderScale, rotation, process, spots }
 }
 
 export function composeSeparationPreview(

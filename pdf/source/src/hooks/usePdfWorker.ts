@@ -5,6 +5,7 @@ import {
   type DocumentPreflight,
   type DocumentSummary,
   type InkCoverageReport,
+  type PageRotation,
   type WorkerRequest,
   type WorkerResponse,
 } from "../worker/messages"
@@ -18,6 +19,8 @@ type RenderedPage = {
   height: number
   cssWidth: number
   cssHeight: number
+  zoom: number
+  rotation: PageRotation
   separationPreview: boolean
   pixels: Uint8ClampedArray<ArrayBuffer>
 }
@@ -114,6 +117,8 @@ export function usePdfWorker() {
                 height: response.height,
                 cssWidth: response.cssWidth,
                 cssHeight: response.cssHeight,
+                zoom: response.zoom,
+                rotation: response.rotation,
                 separationPreview: response.separationPreview,
                 pixels: new Uint8ClampedArray(response.pixels),
               },
@@ -333,7 +338,10 @@ export function usePdfWorker() {
   const renderPage = useCallback(
     (
       pageIndex: number,
+      targetCssWidth: number,
       targetCssHeight: number,
+      zoom: number,
+      rotation: PageRotation,
       pixelRatio: number,
       hiddenSeparations: string[],
       overprintSimulation: boolean,
@@ -349,7 +357,10 @@ export function usePdfWorker() {
         requestId,
         documentId: document.documentId,
         pageIndex,
+        targetCssWidth,
         targetCssHeight,
+        zoom,
+        rotation,
         pixelRatio,
         hiddenSeparations,
         overprintSimulation,

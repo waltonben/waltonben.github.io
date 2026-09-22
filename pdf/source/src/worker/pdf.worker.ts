@@ -23,8 +23,10 @@ import {
 
 const MAX_RENDER_PIXELS = 30_000_000
 const MAX_PAGE_POINTS = 50_000
-const MIN_CSS_HEIGHT = 120
-const MAX_CSS_HEIGHT = 2_400
+const MIN_VIEWPORT_DIMENSION = 40
+const MAX_VIEWPORT_DIMENSION = 4_000
+const MIN_ZOOM = 0.5
+const MAX_ZOOM = 4
 const MAX_PIXEL_RATIO = 2.5
 const POINTS_PER_INCH = 72
 const MILLIMETRES_PER_INCH = 25.4
@@ -276,11 +278,28 @@ function renderPage(request: Extract<WorkerRequest, { type: "RENDER_PAGE" }>) {
   try {
     page = activeDocument.loadPage(request.pageIndex)
     const pageSize = getPageSize(page)
-    const cssHeight = Math.min(
-      MAX_CSS_HEIGHT,
-      Math.max(MIN_CSS_HEIGHT, request.targetCssHeight),
+    const targetCssWidth = Math.min(
+      MAX_VIEWPORT_DIMENSION,
+      Math.max(MIN_VIEWPORT_DIMENSION, request.targetCssWidth),
     )
-    const cssWidth = cssHeight * (pageSize.widthPoints / pageSize.heightPoints)
+    const targetCssHeight = Math.min(
+      MAX_VIEWPORT_DIMENSION,
+      Math.max(MIN_VIEWPORT_DIMENSION, request.targetCssHeight),
+    )
+    const zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, request.zoom))
+    const rotation = request.rotation
+    const rotatedWidthPoints = rotation % 180 === 0
+      ? pageSize.widthPoints
+      : pageSize.heightPoints
+    const rotatedHeightPoints = rotation % 180 === 0
+      ? pageSize.heightPoints
+      : pageSize.widthPoints
+    const fitScale = Math.min(
+      targetCssWidth / rotatedWidthPoints,
+      targetCssHeight / rotatedHeightPoints,
+    )
+    const cssWidth = rotatedWidthPoints * fitScale * zoom
+    const cssHeight = rotatedHeightPoints * fitScale * zoom
     const pixelRatio = Math.min(MAX_PIXEL_RATIO, Math.max(1, request.pixelRatio))
 
     let pixelWidth = cssWidth * pixelRatio
@@ -293,7 +312,11 @@ function renderPage(request: Extract<WorkerRequest, { type: "RENDER_PAGE" }>) {
       pixelHeight *= reduction
     }
 
-    const renderScale = pixelWidth / pageSize.widthPoints
+    const renderScale = pixelWidth / rotatedWidthPoints
+    const renderMatrix = mupdf.Matrix.concat(
+      mupdf.Matrix.scale(renderScale, renderScale),
+      mupdf.Matrix.rotate(rotation),
+    )
     const separationPreview =
       request.hiddenSeparations.length > 0 || request.overprintSimulation
     if (separationPreview) {
@@ -303,6 +326,7 @@ function renderPage(request: Extract<WorkerRequest, { type: "RENDER_PAGE" }>) {
       const cacheMatches =
         separationPreviewCache?.documentId === activeDocumentId &&
         separationPreviewCache.pageIndex === request.pageIndex &&
+        separationPreviewCache.rotation === rotation &&
         Math.abs(separationPreviewCache.renderScale - renderScale) < 0.000001
 
       if (!cacheMatches) {
@@ -312,6 +336,7 @@ function renderPage(request: Extract<WorkerRequest, { type: "RENDER_PAGE" }>) {
           page,
           request.pageIndex,
           renderScale,
+          rotation,
           activePreflight,
         )
       }
@@ -323,7 +348,7 @@ function renderPage(request: Extract<WorkerRequest, { type: "RENDER_PAGE" }>) {
       )
     } else {
       pixmap = page.toPixmap(
-        mupdf.Matrix.scale(renderScale, renderScale),
+        renderMatrix,
         mupdf.ColorSpace.DeviceRGB,
         false,
         true,
@@ -340,6 +365,8 @@ function renderPage(request: Extract<WorkerRequest, { type: "RENDER_PAGE" }>) {
       height: pixmap.getHeight(),
       cssWidth,
       cssHeight,
+      zoom,
+      rotation,
       renderScale,
       separationPreview,
       pixels: rgba.buffer,

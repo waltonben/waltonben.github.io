@@ -1,4 +1,5 @@
 export const MAX_FILE_BYTES = 250 * 1024 * 1024
+export type PageRotation = 0 | 90 | 180 | 270
 
 export type DocumentSummary = {
   documentId: string
@@ -117,7 +118,10 @@ export type RenderPageRequest = {
   requestId: number
   documentId: string
   pageIndex: number
+  targetCssWidth: number
   targetCssHeight: number
+  zoom: number
+  rotation: PageRotation
   pixelRatio: number
   hiddenSeparations: string[]
   overprintSimulation: boolean
@@ -170,6 +174,8 @@ export type PageRenderedResponse = {
   height: number
   cssWidth: number
   cssHeight: number
+  zoom: number
+  rotation: PageRotation
   renderScale: number
   separationPreview: boolean
   pixels: ArrayBuffer
