@@ -21,12 +21,28 @@ function isNamedSeparation(colorSpace: mupdf.ColorSpace | null) {
 
 type Disposable = { destroy(): void }
 
+type BorrowedShade = mupdf.Shade & {
+  constructor: {
+    _finalizer?: FinalizationRegistry<number>
+  }
+  pointer: mupdf.Shade["pointer"]
+}
+
 function releaseAfter<T>(objects: Disposable[], work: () => T): T {
   try {
     return work()
   } finally {
     for (const object of objects) object.destroy()
   }
+}
+
+function releaseBorrowedShade(shade: mupdf.Shade) {
+  // mupdf.js wraps fillShade's borrowed pointer without retaining it. Calling
+  // destroy() (or allowing its FinalizationRegistry to run) frees page-owned
+  // memory and crashes the worker on the next separation render.
+  const borrowed = shade as BorrowedShade
+  borrowed.constructor._finalizer?.unregister(borrowed)
+  borrowed.pointer = 0 as mupdf.Shade["pointer"]
 }
 
 export function renderProcessPlates(
@@ -81,6 +97,13 @@ export function renderProcessPlates(
     clipStrokeText: (text, stroke, ctm) =>
       releaseAfter([text, stroke], () => draw.clipStrokeText(text, stroke, ctm)),
     ignoreText: (text, ctm) => releaseAfter([text], () => draw.ignoreText(text, ctm)),
+    fillShade: (shade, ctm, alpha) => {
+      try {
+        draw.fillShade(shade, ctm, alpha)
+      } finally {
+        releaseBorrowedShade(shade)
+      }
+    },
     fillImage: (image, ctm, alpha) =>
       releaseAfter([image], () => {
         const colorSpace = image.getColorSpace()

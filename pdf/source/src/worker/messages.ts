@@ -13,6 +13,18 @@ export type PageSize = {
   heightPoints: number
   widthMillimetres: number
   heightMillimetres: number
+  mediaWidthMillimetres: number
+  mediaHeightMillimetres: number
+  trimWidthMillimetres: number
+  trimHeightMillimetres: number
+  bleed: {
+    topMillimetres: number
+    rightMillimetres: number
+    bottomMillimetres: number
+    leftMillimetres: number
+    source: "BleedBox" | "MediaBox"
+    declared: boolean
+  } | null
 }
 
 export type ColorModel = "CMYK" | "RGB" | "Gray" | "Mixed" | "NChannel" | "Unknown"
@@ -108,6 +120,7 @@ export type RenderPageRequest = {
   targetCssHeight: number
   pixelRatio: number
   hiddenSeparations: string[]
+  overprintSimulation: boolean
 }
 
 export type CloseDocumentRequest = {

@@ -6,6 +6,7 @@ import {
   type ColorSample,
   type DocumentPreflight,
   type DocumentSummary,
+  type PageSize,
   type PageRenderedResponse,
   type WorkerErrorResponse,
   type WorkerRequest,
@@ -71,10 +72,41 @@ function toMillimetres(points: number) {
   return (points * MILLIMETRES_PER_INCH) / POINTS_PER_INCH
 }
 
-function getPageSize(page: mupdf.Page) {
-  const [x0, y0, x1, y1] = page.getBounds("CropBox")
-  const widthPoints = Math.abs(x1 - x0)
-  const heightPoints = Math.abs(y1 - y0)
+function boxSize([x0, y0, x1, y1]: mupdf.Rect) {
+  return {
+    widthPoints: Math.abs(x1 - x0),
+    heightPoints: Math.abs(y1 - y0),
+  }
+}
+
+function declaredPageBoxes(page: mupdf.Page) {
+  if (!page.isPDF()) return { trim: false, bleed: false }
+
+  const pageObject = (page as mupdf.PDFPage).getObject()
+  const trimBox = pageObject.getInheritable("TrimBox")
+  const bleedBox = pageObject.getInheritable("BleedBox")
+  try {
+    return {
+      trim: trimBox.isArray() && trimBox.length === 4,
+      bleed: bleedBox.isArray() && bleedBox.length === 4,
+    }
+  } finally {
+    bleedBox.destroy()
+    trimBox.destroy()
+    pageObject.destroy()
+  }
+}
+
+function getPageSize(page: mupdf.Page): PageSize {
+  const cropBox = page.getBounds("CropBox")
+  const mediaBox = page.getBounds("MediaBox")
+  const trimBox = page.getBounds("TrimBox")
+  const bleedBox = page.getBounds("BleedBox")
+  const declared = declaredPageBoxes(page)
+  const { widthPoints, heightPoints } = boxSize(cropBox)
+  const media = boxSize(mediaBox)
+  const trim = boxSize(trimBox)
+  const bleedReference = declared.bleed ? bleedBox : mediaBox
 
   if (
     !Number.isFinite(widthPoints) ||
@@ -92,6 +124,20 @@ function getPageSize(page: mupdf.Page) {
     heightPoints,
     widthMillimetres: toMillimetres(widthPoints),
     heightMillimetres: toMillimetres(heightPoints),
+    mediaWidthMillimetres: toMillimetres(media.widthPoints),
+    mediaHeightMillimetres: toMillimetres(media.heightPoints),
+    trimWidthMillimetres: toMillimetres(trim.widthPoints),
+    trimHeightMillimetres: toMillimetres(trim.heightPoints),
+    bleed: declared.trim
+      ? {
+          topMillimetres: toMillimetres(Math.max(0, bleedReference[3] - trimBox[3])),
+          rightMillimetres: toMillimetres(Math.max(0, bleedReference[2] - trimBox[2])),
+          bottomMillimetres: toMillimetres(Math.max(0, trimBox[1] - bleedReference[1])),
+          leftMillimetres: toMillimetres(Math.max(0, trimBox[0] - bleedReference[0])),
+          source: declared.bleed ? "BleedBox" : "MediaBox",
+          declared: declared.bleed,
+        }
+      : null,
   }
 }
 
@@ -248,7 +294,8 @@ function renderPage(request: Extract<WorkerRequest, { type: "RENDER_PAGE" }>) {
     }
 
     const renderScale = pixelWidth / pageSize.widthPoints
-    const separationPreview = request.hiddenSeparations.length > 0
+    const separationPreview =
+      request.hiddenSeparations.length > 0 || request.overprintSimulation
     if (separationPreview) {
       if (!activePreflight) {
         throw new Error("Separation controls are not ready until preflight completes.")
@@ -272,6 +319,7 @@ function renderPage(request: Extract<WorkerRequest, { type: "RENDER_PAGE" }>) {
         separationPreviewCache!,
         activePreflight,
         request.hiddenSeparations,
+        request.overprintSimulation,
       )
     } else {
       pixmap = page.toPixmap(

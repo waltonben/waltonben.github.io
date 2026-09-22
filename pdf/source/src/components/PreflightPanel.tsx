@@ -10,9 +10,11 @@ type PreflightPanelProps = {
   coverageError: string | null
   hiddenSeparations: string[]
   separationPreviewActive: boolean
+  overprintSimulation: boolean
   onToggleSeparation: (name: string) => void
   onIsolateSeparation: (name: string) => void
   onShowAllSeparations: () => void
+  onToggleOverprint: () => void
   sampleStatus: "idle" | "loading" | "ready" | "error"
   sample: ColorSample | null
   sampleError: string | null
@@ -43,9 +45,11 @@ export function PreflightPanel({
   coverageError,
   hiddenSeparations,
   separationPreviewActive,
+  overprintSimulation,
   onToggleSeparation,
   onIsolateSeparation,
   onShowAllSeparations,
+  onToggleOverprint,
   sampleStatus,
   sample,
   sampleError,
@@ -128,22 +132,6 @@ export function PreflightPanel({
         {preflight.pdfStandard && (
           <div className="pdf-standard-badge">Declared {preflight.pdfStandard}</div>
         )}
-        {preflight.colorSpaces.length > 0 && (
-          <details className="profile-more-info">
-            <summary>More info</summary>
-            <div className="color-space-list" aria-label="Observed colour spaces">
-              {preflight.colorSpaces.map((colorSpace) => (
-                <span
-                  className="color-space-pill"
-                  key={`${colorSpace.name}-${colorSpace.type}-${colorSpace.components}`}
-                  title={`${colorSpace.occurrences} interpreted drawing operations`}
-                >
-                  {colorSpace.name}
-                </span>
-              ))}
-            </div>
-          </details>
-        )}
       </div>
 
       <div className="sidebar__section">
@@ -167,6 +155,21 @@ export function PreflightPanel({
             Show all
           </button>
         </div>
+        <button
+          className={`overprint-toggle ${overprintSimulation ? "overprint-toggle--active" : ""}`}
+          type="button"
+          role="switch"
+          aria-checked={overprintSimulation}
+          onClick={onToggleOverprint}
+        >
+          <span className="overprint-toggle__track" aria-hidden="true">
+            <span />
+          </span>
+          <span>
+            <strong>Overprint simulation</strong>
+            <small>{overprintSimulation ? "On" : "Off"} · independent of ink visibility</small>
+          </span>
+        </button>
         <div className="ink-list">
           {preflight.processColors.map((name) => {
             const isVisible = !hiddenSeparationNames.has(name)
@@ -239,29 +242,33 @@ export function PreflightPanel({
         {coverageStatus === "error" && coverageError && (
           <p className="inline-error coverage-error">{coverageError}</p>
         )}
-        {separationPreviewActive && (
+        {(separationPreviewActive || overprintSimulation) && (
           <p className="separation-preview-note">
-            Filtered plate preview. Production overprint simulation is the next stage.
+            {overprintSimulation
+              ? "Overprint simulation is enabled for this proof preview."
+              : "Filtered plate preview. Overprint simulation remains off."}
           </p>
         )}
       </div>
 
       <div className="sidebar__section">
         <span className="section-label">Pixel breakdown</span>
-        {separationPreviewActive ? (
-          <p className="helper-copy">Show all inks to sample the composite artwork.</p>
+        {separationPreviewActive || overprintSimulation ? (
+          <p className="helper-copy">
+            Show all inks and turn off overprint simulation to sample the native composite.
+          </p>
         ) : sampleStatus === "idle" ? (
           <p className="helper-copy">Click the artwork to inspect its rendered channel values.</p>
         ) : null}
-        {!separationPreviewActive && sampleStatus === "loading" && (
+        {!separationPreviewActive && !overprintSimulation && sampleStatus === "loading" && (
           <div className="sample-loading">
             <span className="spinner" /> Calculating channels…
           </div>
         )}
-        {!separationPreviewActive && sampleStatus === "error" && (
+        {!separationPreviewActive && !overprintSimulation && sampleStatus === "error" && (
           <p className="inline-error">{sampleError}</p>
         )}
-        {!separationPreviewActive && sample && sampleStatus !== "loading" && (
+        {!separationPreviewActive && !overprintSimulation && sample && sampleStatus !== "loading" && (
           <div className="sample-result">
             <div className="sample-coordinates">
               X {valueFormatter.format(sample.xMillimetres)} mm · Y{" "}

@@ -19,6 +19,10 @@ body,
   margin: 0;
 }
 
+html {
+  scrollbar-gutter: stable;
+}
+
 body {
   min-height: 100vh;
 }
@@ -505,68 +509,6 @@ button {
   content: "·";
 }
 
-.profile-more-info {
-  margin-top: 14px;
-  border-top: 1px solid #e1e5e1;
-}
-
-.profile-more-info summary {
-  display: flex;
-  gap: 7px;
-  align-items: center;
-  padding-top: 11px;
-  color: #667169;
-  font-size: 10px;
-  font-weight: 700;
-  cursor: pointer;
-  list-style: none;
-  user-select: none;
-}
-
-.profile-more-info summary::-webkit-details-marker {
-  display: none;
-}
-
-.profile-more-info summary::before {
-  color: #859087;
-  content: "›";
-  font-size: 15px;
-  line-height: 1;
-  transform-origin: center;
-  transition: transform 120ms ease;
-}
-
-.profile-more-info[open] summary::before {
-  transform: rotate(90deg);
-}
-
-.profile-more-info summary:focus-visible {
-  border-radius: 4px;
-  outline: 2px solid #799586;
-  outline-offset: 3px;
-}
-
-.color-space-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 10px;
-}
-
-.color-space-pill {
-  max-width: 100%;
-  overflow: hidden;
-  padding: 5px 7px;
-  border: 1px solid #dce1dc;
-  border-radius: 6px;
-  color: #616d65;
-  background: #fafbf9;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 9px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .ink-list {
   display: grid;
   gap: 9px;
@@ -604,6 +546,76 @@ button {
 .separation-toolbar button:not(:disabled):hover,
 .ink-row__solo:hover {
   color: #1d6845;
+}
+
+.overprint-toggle {
+  display: flex;
+  width: 100%;
+  cursor: pointer;
+  align-items: center;
+  gap: 9px;
+  margin-top: 10px;
+  padding: 8px 9px;
+  border: 1px solid #dce1dc;
+  border-radius: 8px;
+  color: #5f6b64;
+  background: #fafbf9;
+  text-align: left;
+}
+
+.overprint-toggle:hover {
+  border-color: #b8c7bd;
+}
+
+.overprint-toggle--active {
+  border-color: #9db8a6;
+  color: #264d38;
+  background: #f0f7f1;
+}
+
+.overprint-toggle__track {
+  position: relative;
+  width: 30px;
+  height: 17px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: #c5ccc7;
+  transition: background 140ms ease;
+}
+
+.overprint-toggle__track span {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 1px 3px rgb(18 35 26 / 25%);
+  transition: transform 140ms ease;
+}
+
+.overprint-toggle--active .overprint-toggle__track {
+  background: #307b51;
+}
+
+.overprint-toggle--active .overprint-toggle__track span {
+  transform: translateX(13px);
+}
+
+.overprint-toggle strong,
+.overprint-toggle small {
+  display: block;
+}
+
+.overprint-toggle strong {
+  font-size: 10px;
+}
+
+.overprint-toggle small {
+  margin-top: 2px;
+  color: #7d8881;
+  font-size: 8px;
 }
 
 .ink-row {

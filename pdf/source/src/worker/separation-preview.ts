@@ -108,6 +108,7 @@ export function composeSeparationPreview(
   cache: SeparationPreviewCache,
   preflight: DocumentPreflight,
   hiddenSeparations: string[],
+  overprintSimulation: boolean,
 ) {
   const hidden = new Set(hiddenSeparations)
   const filteredProcess = new mupdf.Pixmap(
@@ -165,9 +166,12 @@ export function composeSeparationPreview(
             if (tint > 0) {
               for (let channel = 0; channel < 3; channel += 1) {
                 const ink = spot.previewRgb[channel] / 255
-                rgbPixels[rgbOffset + channel] = Math.round(
-                  rgbPixels[rgbOffset + channel] * (1 - tint * (1 - ink)),
-                )
+                rgbPixels[rgbOffset + channel] = overprintSimulation
+                  ? Math.round(rgbPixels[rgbOffset + channel] * (1 - tint * (1 - ink)))
+                  : Math.round(
+                      rgbPixels[rgbOffset + channel] * (1 - tint) +
+                        spot.previewRgb[channel] * tint,
+                    )
               }
             }
             rgbOffset += rgbComponents

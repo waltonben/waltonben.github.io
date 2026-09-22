@@ -38,8 +38,10 @@ Local development and preview builds run from `/`. To prepare a GitHub Pages bui
 - One-click Solo isolation and Show all reset controls.
 - Worker-side process/spot plate caching at the current render scale for responsive repeated toggles.
 - Clear filtered-proof state with composite pixel sampling paused until all inks are restored.
+- Explicit overprint simulation switch, off by default and independent of separation visibility.
+- MediaBox, TrimBox, and BleedBox reporting, including per-edge bleed measurements in millimetres.
 
-The current named-ink analysis covers vector paths, text, and image masks. Gradient/shading spot plates and multichannel spot images need the planned lower-level separation API. Filtered views are plate previews rather than production overprint simulation; overprint controls, the Konva measurement layer, and report generation remain for the following slices.
+The current named-ink analysis covers vector paths, text, and image masks. Gradient/shading spot plates and multichannel spot images need the planned lower-level separation API. The overprint switch provides a screen-proof simulation for cached process and named-ink plates; it does not yet reproduce every object-level PDF `OP`, `op`, and `OPM` interaction. The Konva measurement layer and report generation remain for the following slices.
 
 ## Run locally
 

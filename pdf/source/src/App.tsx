@@ -3,6 +3,7 @@ import { DropZone } from "./components/DropZone"
 import { PdfCanvas } from "./components/PdfCanvas"
 import { PreflightPanel } from "./components/PreflightPanel"
 import { usePdfWorker } from "./hooks/usePdfWorker"
+import type { PageSize } from "./worker/messages"
 
 const numberFormatter = new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 })
 
@@ -10,6 +11,20 @@ function formatBytes(bytes: number) {
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${numberFormatter.format(bytes / 1024)} KB`
   return `${numberFormatter.format(bytes / (1024 * 1024))} MB`
+}
+
+function formatBleed(bleed: PageSize["bleed"]) {
+  if (!bleed) return "Not declared"
+  const values = [
+    bleed.topMillimetres,
+    bleed.rightMillimetres,
+    bleed.bottomMillimetres,
+    bleed.leftMillimetres,
+  ]
+  if (Math.max(...values) - Math.min(...values) < 0.05) {
+    return `${numberFormatter.format(values[0])} mm all sides`
+  }
+  return `T ${numberFormatter.format(values[0])} · R ${numberFormatter.format(values[1])} · B ${numberFormatter.format(values[2])} · L ${numberFormatter.format(values[3])} mm`
 }
 
 function App() {
@@ -38,6 +53,7 @@ function App() {
   const [viewportHeight, setViewportHeight] = useState(0)
   const [sampleMarker, setSampleMarker] = useState<{ x: number; y: number } | null>(null)
   const [hiddenSeparations, setHiddenSeparations] = useState<string[]>([])
+  const [overprintSimulation, setOverprintSimulation] = useState(false)
   const separationNames = useMemo(
     () => [
       ...(preflight?.processColors ?? []),
@@ -46,6 +62,7 @@ function App() {
     [preflight],
   )
   const separationPreviewActive = hiddenSeparations.length > 0
+  const proofPreviewActive = separationPreviewActive || overprintSimulation
 
   useEffect(() => {
     const element = canvasViewportRef.current
@@ -65,19 +82,21 @@ function App() {
       viewportHeight,
       window.devicePixelRatio || 1,
       preflightStatus === "ready" ? hiddenSeparations : [],
+      preflightStatus === "ready" && overprintSimulation,
     )
-  }, [document, hiddenSeparations, preflightStatus, renderPage, viewportHeight])
+  }, [document, hiddenSeparations, overprintSimulation, preflightStatus, renderPage, viewportHeight])
 
   useEffect(() => {
     if (!document) return
     inspectDocument()
     setSampleMarker(null)
     setHiddenSeparations([])
+    setOverprintSimulation(false)
   }, [document, inspectDocument])
 
   useEffect(() => {
     setSampleMarker(null)
-  }, [hiddenSeparations])
+  }, [hiddenSeparations, overprintSimulation])
 
   const toggleSeparation = useCallback((name: string) => {
     setHiddenSeparations((current) =>
@@ -101,8 +120,8 @@ function App() {
       : status === "loading"
         ? "Opening PDF in the local worker…"
         : status === "rendering"
-          ? separationPreviewActive
-            ? "Updating separation preview…"
+          ? proofPreviewActive
+            ? "Updating proof preview…"
             : "Rendering page locally…"
           : "Processed locally in this browser"
 
@@ -157,10 +176,23 @@ function App() {
                   <dd>{formatBytes(document.fileSize)}</dd>
                 </div>
                 <div>
-                  <dt>Page 1</dt>
+                  <dt>Media</dt>
                   <dd>
-                    {numberFormatter.format(document.firstPage.widthMillimetres)} ×{" "}
-                    {numberFormatter.format(document.firstPage.heightMillimetres)} mm
+                    {numberFormatter.format(document.firstPage.mediaWidthMillimetres)} ×{" "}
+                    {numberFormatter.format(document.firstPage.mediaHeightMillimetres)} mm
+                  </dd>
+                </div>
+                <div>
+                  <dt>Trim</dt>
+                  <dd>
+                    {numberFormatter.format(document.firstPage.trimWidthMillimetres)} ×{" "}
+                    {numberFormatter.format(document.firstPage.trimHeightMillimetres)} mm
+                  </dd>
+                </div>
+                <div>
+                  <dt>Bleed</dt>
+                  <dd title={document.firstPage.bleed?.declared ? "Declared PDF BleedBox" : "Calculated from MediaBox and TrimBox"}>
+                    {formatBleed(document.firstPage.bleed)}
                   </dd>
                 </div>
               </dl>
@@ -176,6 +208,8 @@ function App() {
               coverageError={coverageError}
               hiddenSeparations={hiddenSeparations}
               separationPreviewActive={separationPreviewActive}
+              overprintSimulation={overprintSimulation}
+              onToggleOverprint={() => setOverprintSimulation((current) => !current)}
               onToggleSeparation={toggleSeparation}
               onIsolateSeparation={isolateSeparation}
               onShowAllSeparations={showAllSeparations}
@@ -196,8 +230,10 @@ function App() {
             <div className="workspace__toolbar">
               <span>Page 1 of {document.pageCount}</span>
               <div className="workspace__status-group">
-                {separationPreviewActive && (
-                  <span className="separation-preview-badge">Filtered proof</span>
+                {proofPreviewActive && (
+                  <span className="separation-preview-badge">
+                    {separationPreviewActive ? "Filtered proof" : "Overprint proof"}
+                  </span>
                 )}
                 <span className={`render-status render-status--${status}`}>{statusText}</span>
               </div>
@@ -205,9 +241,9 @@ function App() {
             <div className="canvas-viewport" ref={canvasViewportRef}>
               {renderedPage && (
                 <div
-                  className={`canvas-stack ${preflightStatus === "ready" && !separationPreviewActive ? "canvas-stack--inspectable" : ""}`}
+                  className={`canvas-stack ${preflightStatus === "ready" && !proofPreviewActive ? "canvas-stack--inspectable" : ""}`}
                   onPointerDown={(event) => {
-                    if (preflightStatus !== "ready" || separationPreviewActive) return
+                    if (preflightStatus !== "ready" || proofPreviewActive) return
                     const bounds = event.currentTarget.getBoundingClientRect()
                     const x = Math.min(1, Math.max(0, (event.clientX - bounds.left) / bounds.width))
                     const y = Math.min(1, Math.max(0, (event.clientY - bounds.top) / bounds.height))

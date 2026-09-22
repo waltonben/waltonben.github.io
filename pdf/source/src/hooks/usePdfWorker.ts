@@ -336,6 +336,7 @@ export function usePdfWorker() {
       targetCssHeight: number,
       pixelRatio: number,
       hiddenSeparations: string[],
+      overprintSimulation: boolean,
     ) => {
       const document = state.document
       if (!document) return
@@ -351,6 +352,7 @@ export function usePdfWorker() {
         targetCssHeight,
         pixelRatio,
         hiddenSeparations,
+        overprintSimulation,
       })
     },
     [nextRequestId, post, state.document],
