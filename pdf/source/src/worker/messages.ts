@@ -104,6 +104,26 @@ export type ColorSample = {
   note?: string
 }
 
+export type VectorNode = {
+  id: number
+  xPoints: number
+  yPoints: number
+}
+
+export type VectorPathGroup = {
+  name: string
+  pathCount: number
+  nodes: VectorNode[]
+}
+
+export type VectorGeometryReport = {
+  documentId: string
+  pageIndex: number
+  groups: VectorPathGroup[]
+  truncated: boolean
+  notes: string[]
+}
+
 export type LoadDocumentRequest = {
   type: "LOAD_DOCUMENT"
   requestId: number
@@ -148,11 +168,20 @@ export type SampleColorRequest = {
   yPoints: number
 }
 
+export type ExtractVectorPathsRequest = {
+  type: "EXTRACT_VECTOR_PATHS"
+  requestId: number
+  documentId: string
+  pageIndex: number
+  separationNames: string[]
+}
+
 export type WorkerRequest =
   | LoadDocumentRequest
   | RenderPageRequest
   | PreflightDocumentRequest
   | SampleColorRequest
+  | ExtractVectorPathsRequest
   | CloseDocumentRequest
 
 export type WorkerReadyResponse = {
@@ -212,10 +241,16 @@ export type InkCoverageCompletedResponse = {
   coverage: InkCoverageReport
 }
 
+export type VectorPathsExtractedResponse = {
+  type: "VECTOR_PATHS_EXTRACTED"
+  requestId: number
+  geometry: VectorGeometryReport
+}
+
 export type WorkerErrorResponse = {
   type: "WORKER_ERROR"
   requestId?: number
-  scope: "worker" | "document" | "render" | "preflight" | "sample" | "coverage"
+  scope: "worker" | "document" | "render" | "preflight" | "sample" | "coverage" | "vector"
   code:
     | "INVALID_FILE"
     | "PASSWORD_REQUIRED"
@@ -226,6 +261,7 @@ export type WorkerErrorResponse = {
     | "PREFLIGHT_FAILED"
     | "SAMPLE_FAILED"
     | "COVERAGE_FAILED"
+    | "VECTOR_EXTRACTION_FAILED"
     | "UNKNOWN"
   message: string
 }
@@ -238,5 +274,6 @@ export type WorkerResponse =
   | PreflightCompletedResponse
   | ColorSampledResponse
   | InkCoverageCompletedResponse
+  | VectorPathsExtractedResponse
   | DocumentClosedResponse
   | WorkerErrorResponse

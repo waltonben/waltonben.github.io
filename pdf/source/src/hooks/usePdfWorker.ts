@@ -6,6 +6,7 @@ import {
   type DocumentSummary,
   type InkCoverageReport,
   type PageRotation,
+  type VectorGeometryReport,
   type WorkerRequest,
   type WorkerResponse,
 } from "../worker/messages"
@@ -40,6 +41,9 @@ type PdfWorkerState = {
   sampleStatus: "idle" | "loading" | "ready" | "error"
   sample: ColorSample | null
   sampleError: string | null
+  vectorStatus: "idle" | "loading" | "ready" | "error"
+  vectorGeometry: VectorGeometryReport | null
+  vectorError: string | null
 }
 
 const initialState: PdfWorkerState = {
@@ -57,6 +61,9 @@ const initialState: PdfWorkerState = {
   sampleStatus: "idle",
   sample: null,
   sampleError: null,
+  vectorStatus: "idle",
+  vectorGeometry: null,
+  vectorError: null,
 }
 
 function fileLooksLikePdf(file: File) {
@@ -71,6 +78,7 @@ export function usePdfWorker() {
   const newestLoadRequestRef = useRef(0)
   const newestPreflightRequestRef = useRef(0)
   const newestSampleRequestRef = useRef(0)
+  const newestVectorRequestRef = useRef(0)
   const loadTokenRef = useRef(0)
 
   const nextRequestId = useCallback(() => {
@@ -179,6 +187,18 @@ export function usePdfWorker() {
             }
           })
           break
+        case "VECTOR_PATHS_EXTRACTED":
+          if (response.requestId !== newestVectorRequestRef.current) return
+          setState((current) => {
+            if (current.document?.documentId !== response.geometry.documentId) return current
+            return {
+              ...current,
+              vectorStatus: "ready",
+              vectorGeometry: response.geometry,
+              vectorError: null,
+            }
+          })
+          break
         case "WORKER_ERROR":
           if (response.scope === "preflight") {
             if (response.requestId !== newestPreflightRequestRef.current) return
@@ -205,6 +225,15 @@ export function usePdfWorker() {
               ...current,
               coverageStatus: "error",
               coverageError: response.message,
+            }))
+            return
+          }
+          if (response.scope === "vector") {
+            if (response.requestId !== newestVectorRequestRef.current) return
+            setState((current) => ({
+              ...current,
+              vectorStatus: "error",
+              vectorError: response.message,
             }))
             return
           }
@@ -369,6 +398,30 @@ export function usePdfWorker() {
     [nextRequestId, post, state.document],
   )
 
+  const extractVectorPaths = useCallback(
+    (pageIndex: number, separationNames: string[]) => {
+      const document = state.document
+      if (!document) return
+
+      const requestId = nextRequestId()
+      newestVectorRequestRef.current = requestId
+      setState((current) => ({
+        ...current,
+        vectorStatus: "loading",
+        vectorGeometry: null,
+        vectorError: null,
+      }))
+      post({
+        type: "EXTRACT_VECTOR_PATHS",
+        requestId,
+        documentId: document.documentId,
+        pageIndex,
+        separationNames,
+      })
+    },
+    [nextRequestId, post, state.document],
+  )
+
   const closeDocument = useCallback(() => {
     loadTokenRef.current += 1
     const requestId = nextRequestId()
@@ -381,5 +434,13 @@ export function usePdfWorker() {
     }))
   }, [nextRequestId, post, state.document?.documentId])
 
-  return { ...state, loadFile, renderPage, inspectDocument, sampleColor, closeDocument }
+  return {
+    ...state,
+    loadFile,
+    renderPage,
+    inspectDocument,
+    sampleColor,
+    extractVectorPaths,
+    closeDocument,
+  }
 }

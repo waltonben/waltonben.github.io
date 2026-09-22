@@ -14,6 +14,7 @@ import {
 } from "./messages"
 import { preflightPdf } from "./preflight"
 import { calculateInkCoverage } from "./coverage"
+import { extractVectorPaths as extractVectorGeometry } from "./vector-paths"
 import {
   composeSeparationPreview,
   createSeparationPreviewCache,
@@ -543,6 +544,58 @@ function sampleColor(request: Extract<WorkerRequest, { type: "SAMPLE_COLOR" }>) 
   }
 }
 
+function extractVectorPaths(request: Extract<WorkerRequest, { type: "EXTRACT_VECTOR_PATHS" }>) {
+  if (!activeDocument || !activeDocumentId) {
+    post(errorResponse("No PDF is loaded.", "vector", "NO_DOCUMENT", request.requestId))
+    return
+  }
+  if (request.documentId !== activeDocumentId) {
+    post(
+      errorResponse(
+        "The vector request belongs to an older document.",
+        "vector",
+        "STALE_DOCUMENT",
+        request.requestId,
+      ),
+    )
+    return
+  }
+  if (request.pageIndex < 0 || request.pageIndex >= activeDocument.countPages()) {
+    post(
+      errorResponse(
+        "The requested page is outside the document.",
+        "vector",
+        "VECTOR_EXTRACTION_FAILED",
+        request.requestId,
+      ),
+    )
+    return
+  }
+
+  let page: mupdf.Page | null = null
+  try {
+    page = activeDocument.loadPage(request.pageIndex)
+    const geometry = extractVectorGeometry(
+      activeDocumentId,
+      page,
+      request.pageIndex,
+      request.separationNames,
+    )
+    post({ type: "VECTOR_PATHS_EXTRACTED", requestId: request.requestId, geometry })
+  } catch (error) {
+    post(
+      errorResponse(
+        error instanceof Error ? error.message : "MuPDF could not extract vector paths.",
+        "vector",
+        "VECTOR_EXTRACTION_FAILED",
+        request.requestId,
+      ),
+    )
+  } finally {
+    page?.destroy()
+  }
+}
+
 self.addEventListener("message", (event: MessageEvent<WorkerRequest>) => {
   const request = event.data
 
@@ -558,6 +611,9 @@ self.addEventListener("message", (event: MessageEvent<WorkerRequest>) => {
       break
     case "SAMPLE_COLOR":
       sampleColor(request)
+      break
+    case "EXTRACT_VECTOR_PATHS":
+      extractVectorPaths(request)
       break
     case "CLOSE_DOCUMENT":
       closeActiveDocument()

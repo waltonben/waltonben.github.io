@@ -2,7 +2,7 @@
 
 Pressproof is a local-first pre-press PDF workspace built with React, TypeScript, Web Workers, WebAssembly, and MuPDF.js.
 
-Local development and preview builds run from `/`. To prepare a GitHub Pages build for the existing `/pdf/` subdirectory, use `npm run build -- --base /pdf/`.
+The app is configured for the existing `/pdf/` GitHub Pages subdirectory. Vite's local server and preview expose the same path.
 
 ## Implemented milestones
 
@@ -41,7 +41,17 @@ Local development and preview builds run from `/`. To prepare a GitHub Pages bui
 - Explicit overprint simulation switch, off by default and independent of separation visibility.
 - MediaBox, TrimBox, and BleedBox reporting, including per-edge bleed measurements in millimetres.
 
-The current named-ink analysis covers vector paths, text, and image masks. Gradient/shading spot plates and multichannel spot images need the planned lower-level separation API. The overprint switch provides a screen-proof simulation for cached process and named-ink plates; it does not yet reproduce every object-level PDF `OP`, `op`, and `OPM` interaction. The Konva measurement layer and report generation remain for the following slices.
+### Milestone 4 — vector measurement
+
+- Worker-side extraction of move, line, and Bézier endpoint nodes from used technical separations.
+- Page-coordinate geometry stays independent of render resolution and is extracted once per document.
+- `react-konva` interaction layer above the rendered PDF canvas.
+- Screen-space spatial index for responsive node snapping on large cutter paths.
+- Start/end coordinates, X/Y deltas, and absolute line length in millimetres.
+- Measurement geometry remains aligned through fit, zoom, pan, and 90-degree rotation.
+- Selectable technical target separation with clear/reset controls.
+
+The current named-ink analysis covers vector paths, text, and image masks. Gradient/shading spot plates and multichannel spot images need the planned lower-level separation API. The overprint switch provides a screen-proof simulation for cached process and named-ink plates; it does not yet reproduce every object-level PDF `OP`, `op`, and `OPM` interaction. Report generation remains for the following slice.
 
 ## Run locally
 

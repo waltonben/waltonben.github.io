@@ -1,4 +1,6 @@
 import {
+  lazy,
+  Suspense,
   useCallback,
   useEffect,
   useMemo,
@@ -8,16 +10,24 @@ import {
 } from "react"
 import harlequinLogo from "./assets/HQAutomationLogo.svg"
 import { DropZone } from "./components/DropZone"
+import type { MeasurementSelection } from "./components/MeasureOverlay"
 import { PdfCanvas } from "./components/PdfCanvas"
 import { PreflightPanel } from "./components/PreflightPanel"
 import { usePdfWorker } from "./hooks/usePdfWorker"
 import type { PageRotation, PageSize } from "./worker/messages"
 
 const numberFormatter = new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 })
+const measurementFormatter = new Intl.NumberFormat(undefined, {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+})
 const VIEWPORT_PADDING = 72
 const MIN_ZOOM = 0.5
 const MAX_ZOOM = 4
 const ZOOM_STEP = 0.25
+const MeasureOverlay = lazy(() =>
+  import("./components/MeasureOverlay").then((module) => ({ default: module.MeasureOverlay })),
+)
 
 function formatBytes(bytes: number) {
   if (bytes < 1024) return `${bytes} B`
@@ -68,10 +78,14 @@ function App() {
     sampleStatus,
     sample,
     sampleError,
+    vectorStatus,
+    vectorGeometry,
+    vectorError,
     loadFile,
     renderPage,
     inspectDocument,
     sampleColor,
+    extractVectorPaths,
     closeDocument,
   } = usePdfWorker()
   const canvasViewportRef = useRef<HTMLDivElement>(null)
@@ -90,6 +104,10 @@ function App() {
   const [sampleMarker, setSampleMarker] = useState<{ x: number; y: number } | null>(null)
   const [hiddenSeparations, setHiddenSeparations] = useState<string[]>([])
   const [overprintSimulation, setOverprintSimulation] = useState(false)
+  const [measureActive, setMeasureActive] = useState(false)
+  const [selectedMeasureInk, setSelectedMeasureInk] = useState("")
+  const [measurement, setMeasurement] = useState<MeasurementSelection | null>(null)
+  const [measurementResetToken, setMeasurementResetToken] = useState(0)
   const zeroCoverageNames = useMemo(
     () =>
       coverageStatus === "ready" && coverage
@@ -112,6 +130,16 @@ function App() {
   )
   const separationPreviewActive = hiddenSeparations.length > 0
   const proofPreviewActive = separationPreviewActive || overprintSimulation
+  const technicalSeparationNames = useMemo(
+    () =>
+      preflight?.spotColors
+        .filter((spot) => spot.status === "used" && spot.role === "technical")
+        .map((spot) => spot.name) ?? [],
+    [preflight],
+  )
+  const measurementGroups = useMemo(() => vectorGeometry?.groups ?? [], [vectorGeometry])
+  const selectedMeasurementGroup =
+    measurementGroups.find((group) => group.name === selectedMeasureInk) ?? null
   const renderedCssWidth = renderedPage?.cssWidth
   const renderedCssHeight = renderedPage?.cssHeight
   const renderedZoom = renderedPage?.zoom
@@ -165,9 +193,39 @@ function App() {
     setSampleMarker(null)
     setHiddenSeparations([])
     setOverprintSimulation(false)
+    setMeasureActive(false)
+    setSelectedMeasureInk("")
+    setMeasurement(null)
+    setMeasurementResetToken(0)
     setZoom(1)
     setRotation(0)
   }, [document, inspectDocument])
+
+  useEffect(() => {
+    if (
+      preflightStatus !== "ready" ||
+      vectorStatus !== "idle" ||
+      technicalSeparationNames.length === 0
+    ) {
+      return
+    }
+    extractVectorPaths(0, technicalSeparationNames)
+  }, [extractVectorPaths, preflightStatus, technicalSeparationNames, vectorStatus])
+
+  useEffect(() => {
+    if (vectorStatus !== "ready") return
+    const preferredGroup =
+      measurementGroups.find((group) => /(?:cut external|dieline|die[ -]?line|knife)/i.test(group.name)) ??
+      measurementGroups.find((group) => /cut/i.test(group.name)) ??
+      measurementGroups[0]
+
+    setSelectedMeasureInk((current) =>
+      measurementGroups.some((group) => group.name === current)
+        ? current
+        : (preferredGroup?.name ?? ""),
+    )
+    if (!preferredGroup) setMeasureActive(false)
+  }, [measurementGroups, vectorStatus])
 
   useEffect(() => {
     setSampleMarker(null)
@@ -284,6 +342,41 @@ function App() {
   )
 
   const showAllSeparations = useCallback(() => setHiddenSeparations([]), [])
+
+  const toggleMeasure = useCallback(() => {
+    setMeasureActive((current) => !current)
+    setSampleMarker(null)
+    setMeasurement(null)
+    setMeasurementResetToken((current) => current + 1)
+  }, [])
+
+  const clearMeasurement = useCallback(() => {
+    setMeasurement(null)
+    setMeasurementResetToken((current) => current + 1)
+  }, [])
+
+  const selectMeasureInk = useCallback((name: string) => {
+    setSelectedMeasureInk(name)
+    setMeasurement(null)
+    setMeasurementResetToken((current) => current + 1)
+  }, [])
+
+  const measurementValues = useMemo(() => {
+    if (!measurement) return null
+    const pointsToMillimetres = 25.4 / 72
+    const start = {
+      x: measurement.start.xPoints * pointsToMillimetres,
+      y: measurement.start.yPoints * pointsToMillimetres,
+    }
+    if (!measurement.end) return { start, end: null, deltaX: 0, deltaY: 0, length: 0 }
+    const end = {
+      x: measurement.end.xPoints * pointsToMillimetres,
+      y: measurement.end.yPoints * pointsToMillimetres,
+    }
+    const deltaX = end.x - start.x
+    const deltaY = end.y - start.y
+    return { start, end, deltaX, deltaY, length: Math.hypot(deltaX, deltaY) }
+  }, [measurement])
 
   const isBusy = status === "starting" || status === "loading"
   const statusText =
@@ -444,6 +537,24 @@ function App() {
                   >
                     ↷
                   </button>
+                  <button
+                    className={`measure-tool ${measureActive ? "measure-tool--active" : ""}`}
+                    type="button"
+                    aria-label="Toggle vector measurement tool"
+                    aria-pressed={measureActive}
+                    disabled={!selectedMeasurementGroup}
+                    title={
+                      vectorStatus === "loading"
+                        ? "Extracting technical vector paths…"
+                        : vectorError ??
+                          (selectedMeasurementGroup
+                            ? "Measure between cutter or technical vector nodes"
+                            : "No measurable technical vector paths were found")
+                    }
+                    onClick={toggleMeasure}
+                  >
+                    Measure
+                  </button>
                 </div>
               </div>
               <div className="workspace__status-group">
@@ -455,6 +566,73 @@ function App() {
                 <span className={`render-status render-status--${status}`}>{statusText}</span>
               </div>
             </div>
+            {measureActive && selectedMeasurementGroup && (
+              <section className="measurement-panel" aria-label="Vector measurement">
+                <div className="measurement-panel__heading">
+                  <div>
+                    <strong>Vector measure</strong>
+                    <span>{selectedMeasurementGroup.nodes.length.toLocaleString()} snap nodes</span>
+                  </div>
+                  <button type="button" onClick={toggleMeasure} aria-label="Close measurement tool">
+                    ×
+                  </button>
+                </div>
+                <label className="measurement-target">
+                  <span>Snap to</span>
+                  <select
+                    value={selectedMeasurementGroup.name}
+                    onChange={(event) => selectMeasureInk(event.target.value)}
+                  >
+                    {measurementGroups.map((group) => (
+                      <option key={group.name} value={group.name}>
+                        {group.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                {!measurementValues ? (
+                  <p>Click a highlighted node, then click the second node.</p>
+                ) : (
+                  <>
+                    <dl className="measurement-values">
+                      <div>
+                        <dt>Start X / Y</dt>
+                        <dd>
+                          {measurementFormatter.format(measurementValues.start.x)} /{" "}
+                          {measurementFormatter.format(measurementValues.start.y)} mm
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>End X / Y</dt>
+                        <dd>
+                          {measurementValues.end
+                            ? `${measurementFormatter.format(measurementValues.end.x)} / ${measurementFormatter.format(measurementValues.end.y)} mm`
+                            : "Choose a second node"}
+                        </dd>
+                      </div>
+                      {measurementValues.end && (
+                        <>
+                          <div>
+                            <dt>ΔX / ΔY</dt>
+                            <dd>
+                              {measurementFormatter.format(measurementValues.deltaX)} /{" "}
+                              {measurementFormatter.format(measurementValues.deltaY)} mm
+                            </dd>
+                          </div>
+                          <div className="measurement-values__length">
+                            <dt>Length</dt>
+                            <dd>{measurementFormatter.format(measurementValues.length)} mm</dd>
+                          </div>
+                        </>
+                      )}
+                    </dl>
+                    <button className="measurement-clear" type="button" onClick={clearMeasurement}>
+                      Clear measurement
+                    </button>
+                  </>
+                )}
+              </section>
+            )}
             <div
               className={`canvas-viewport ${isSpacePressed && zoom > 1 ? "canvas-viewport--pan-ready" : ""} ${isPanning ? "canvas-viewport--panning" : ""}`}
               ref={canvasViewportRef}
@@ -467,11 +645,12 @@ function App() {
               <div className="canvas-stage">
                 {renderedPage && (
                   <div
-                    className={`canvas-stack ${preflightStatus === "ready" && !proofPreviewActive ? "canvas-stack--inspectable" : ""}`}
+                    className={`canvas-stack ${preflightStatus === "ready" && !proofPreviewActive && !measureActive ? "canvas-stack--inspectable" : ""}`}
                     onPointerDown={(event) => {
                       if (
                         preflightStatus !== "ready" ||
                         proofPreviewActive ||
+                        measureActive ||
                         isSpacePressed ||
                         isPanning
                       ) return
@@ -496,6 +675,20 @@ function App() {
                         />
                       )}
                     </div>
+                    {measureActive && selectedMeasurementGroup && (
+                      <Suspense fallback={null}>
+                        <MeasureOverlay
+                          width={renderedPage.cssWidth}
+                          height={renderedPage.cssHeight}
+                          pageWidthPoints={document.firstPage.widthPoints}
+                          pageHeightPoints={document.firstPage.heightPoints}
+                          rotation={renderedPage.rotation}
+                          group={selectedMeasurementGroup}
+                          resetToken={measurementResetToken}
+                          onChange={setMeasurement}
+                        />
+                      </Suspense>
+                    )}
                   </div>
                 )}
               </div>
