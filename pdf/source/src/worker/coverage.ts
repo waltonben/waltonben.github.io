@@ -9,6 +9,13 @@ import { parseSeparationName } from "./preflight"
 const COVERAGE_DPI = 72
 const POINTS_PER_INCH = 72
 const SQUARE_MILLIMETRES_PER_SQUARE_INCH = 25.4 * 25.4
+const PROCESS_SEPARATION_NAMES = new Set(["cyan", "magenta", "yellow", "black", "all", "none"])
+const PROCESS_CHANNELS = new Map([
+  ["cyan", 0],
+  ["magenta", 1],
+  ["yellow", 2],
+  ["black", 3],
+])
 
 function rasterBounds(page: mupdf.Page, matrix: mupdf.Matrix): mupdf.Rect {
   const [x0, y0, x1, y1] = mupdf.Rect.transform(page.getBounds("CropBox"), matrix)
@@ -17,6 +24,44 @@ function rasterBounds(page: mupdf.Page, matrix: mupdf.Matrix): mupdf.Rect {
 
 function isNamedSeparation(colorSpace: mupdf.ColorSpace | null) {
   return Boolean(colorSpace && (colorSpace.getType() === "Separation" || colorSpace.isDeviceN()))
+}
+
+function isNonProcessNamedSeparation(colorSpace: mupdf.ColorSpace | null) {
+  if (!colorSpace || !isNamedSeparation(colorSpace)) return false
+  const names = parseSeparationName(colorSpace.getName()).names
+
+  // Illustrator and ArtPro can encode ordinary process plates as Separation
+  // or DeviceN spaces. Keep those in the CMYK base; only genuine named inks
+  // belong in the independently composited spot/technical plate cache.
+  return (
+    names.length === 0 ||
+    names.some((name) => !PROCESS_SEPARATION_NAMES.has(name.trim().toLowerCase()))
+  )
+}
+
+function convertNamedProcessColor(colorSpace: mupdf.ColorSpace, color: number[]) {
+  const names = parseSeparationName(colorSpace.getName()).names
+  if (
+    names.length === 0 ||
+    names.some((name) => !PROCESS_SEPARATION_NAMES.has(name.trim().toLowerCase()))
+  ) {
+    return null
+  }
+
+  const cmyk = [0, 0, 0, 0]
+  names.forEach((name, componentIndex) => {
+    const normalizedName = name.trim().toLowerCase()
+    const tint = Math.min(1, Math.max(0, color[componentIndex] ?? 0))
+    if (normalizedName === "all") {
+      for (let channel = 0; channel < cmyk.length; channel += 1) {
+        cmyk[channel] = Math.max(cmyk[channel], tint)
+      }
+      return
+    }
+    const channel = PROCESS_CHANNELS.get(normalizedName)
+    if (channel !== undefined) cmyk[channel] = Math.max(cmyk[channel], tint)
+  })
+  return cmyk
 }
 
 type Disposable = { destroy(): void }
@@ -67,9 +112,16 @@ export function renderProcessPlates(
     color: number[],
     alpha: number,
   ) => {
-    if (isNamedSeparation(colorSpace)) return
+    let paintColorSpace = colorSpace
+    let paintColor = color
+    if (isNamedSeparation(colorSpace)) {
+      const convertedColor = convertNamedProcessColor(colorSpace, color)
+      if (!convertedColor) return
+      paintColorSpace = mupdf.ColorSpace.DeviceCMYK
+      paintColor = convertedColor
+    }
     const call = draw[method] as (...parameters: unknown[]) => void
-    call.call(draw, ...args, colorSpace, color, alpha)
+    call.call(draw, ...args, paintColorSpace, paintColor, alpha)
   }
 
   const device = new mupdf.Device({
@@ -108,7 +160,7 @@ export function renderProcessPlates(
       releaseAfter([image], () => {
         const colorSpace = image.getColorSpace()
         try {
-          if (!isNamedSeparation(colorSpace)) draw.fillImage(image, ctm, alpha)
+          if (!isNonProcessNamedSeparation(colorSpace)) draw.fillImage(image, ctm, alpha)
         } finally {
           colorSpace?.destroy()
         }

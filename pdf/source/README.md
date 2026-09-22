@@ -49,7 +49,7 @@ The app is configured for the existing `/pdf/` GitHub Pages subdirectory. Vite's
 - Screen-space spatial index for responsive node snapping on large cutter paths.
 - Start/end coordinates, X/Y deltas, and absolute line length in millimetres.
 - Measurement geometry remains aligned through fit, zoom, pan, and 90-degree rotation.
-- Selectable technical target separation with clear/reset controls.
+- Selectable named-separation target with clear/reset controls; CMYK process plates are excluded, while both technical and Pantone/spot inks can provide measurement geometry.
 
 The current named-ink analysis covers vector paths, text, and image masks. Gradient/shading spot plates and multichannel spot images need the planned lower-level separation API. The overprint switch provides a screen-proof simulation for cached process and named-ink plates; it does not yet reproduce every object-level PDF `OP`, `op`, and `OPM` interaction. Report generation remains for the following slice.
 

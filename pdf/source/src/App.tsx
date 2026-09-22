@@ -25,6 +25,7 @@ const VIEWPORT_PADDING = 72
 const MIN_ZOOM = 0.5
 const MAX_ZOOM = 4
 const ZOOM_STEP = 0.25
+const PROCESS_SEPARATION_NAMES = new Set(["cyan", "magenta", "yellow", "black"])
 const MeasureOverlay = lazy(() =>
   import("./components/MeasureOverlay").then((module) => ({ default: module.MeasureOverlay })),
 )
@@ -130,10 +131,14 @@ function App() {
   )
   const separationPreviewActive = hiddenSeparations.length > 0
   const proofPreviewActive = separationPreviewActive || overprintSimulation
-  const technicalSeparationNames = useMemo(
+  const measurableSeparationNames = useMemo(
     () =>
       preflight?.spotColors
-        .filter((spot) => spot.status === "used" && spot.role === "technical")
+        .filter(
+          (spot) =>
+            spot.status === "used" &&
+            !PROCESS_SEPARATION_NAMES.has(spot.name.trim().toLowerCase()),
+        )
         .map((spot) => spot.name) ?? [],
     [preflight],
   )
@@ -205,12 +210,12 @@ function App() {
     if (
       preflightStatus !== "ready" ||
       vectorStatus !== "idle" ||
-      technicalSeparationNames.length === 0
+      measurableSeparationNames.length === 0
     ) {
       return
     }
-    extractVectorPaths(0, technicalSeparationNames)
-  }, [extractVectorPaths, preflightStatus, technicalSeparationNames, vectorStatus])
+    extractVectorPaths(0, measurableSeparationNames)
+  }, [extractVectorPaths, measurableSeparationNames, preflightStatus, vectorStatus])
 
   useEffect(() => {
     if (vectorStatus !== "ready") return
@@ -545,11 +550,11 @@ function App() {
                     disabled={!selectedMeasurementGroup}
                     title={
                       vectorStatus === "loading"
-                        ? "Extracting technical vector paths…"
+                        ? "Extracting named-separation vector paths…"
                         : vectorError ??
                           (selectedMeasurementGroup
-                            ? "Measure between cutter or technical vector nodes"
-                            : "No measurable technical vector paths were found")
+                            ? "Measure between named-separation vector nodes"
+                            : "No measurable non-process separation vector paths were found")
                     }
                     onClick={toggleMeasure}
                   >
