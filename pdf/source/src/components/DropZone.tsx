@@ -52,6 +52,7 @@ export function DropZone({ disabled = false, compact = false, onFile }: DropZone
       role="button"
       tabIndex={disabled ? -1 : 0}
       aria-disabled={disabled}
+      aria-label={compact ? "Open another PDF" : undefined}
     >
       <input
         ref={inputRef}

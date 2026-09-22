@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import harlequinLogo from "./assets/HQAutomationLogo.svg"
 import { DropZone } from "./components/DropZone"
 import { PdfCanvas } from "./components/PdfCanvas"
 import { PreflightPanel } from "./components/PreflightPanel"
@@ -54,12 +55,25 @@ function App() {
   const [sampleMarker, setSampleMarker] = useState<{ x: number; y: number } | null>(null)
   const [hiddenSeparations, setHiddenSeparations] = useState<string[]>([])
   const [overprintSimulation, setOverprintSimulation] = useState(false)
+  const zeroCoverageNames = useMemo(
+    () =>
+      coverageStatus === "ready" && coverage
+        ? new Set(
+            coverage.channels
+              .filter((channel) => channel.coveragePercent === 0)
+              .map((channel) => channel.name),
+          )
+        : null,
+    [coverage, coverageStatus],
+  )
   const separationNames = useMemo(
     () => [
-      ...(preflight?.processColors ?? []),
-      ...(preflight?.spotColors.map((spot) => spot.name) ?? []),
+      ...(preflight?.processColors.filter((name) => !zeroCoverageNames?.has(name)) ?? []),
+      ...(preflight?.spotColors
+        .map((spot) => spot.name)
+        .filter((name) => !zeroCoverageNames?.has(name)) ?? []),
     ],
-    [preflight],
+    [preflight, zeroCoverageNames],
   )
   const separationPreviewActive = hiddenSeparations.length > 0
   const proofPreviewActive = separationPreviewActive || overprintSimulation
@@ -128,18 +142,14 @@ function App() {
   return (
     <main className="app-shell">
       <header className="topbar">
-        <a className="brand" href="/" aria-label="Pressproof home">
-          <span className="brand__mark" aria-hidden="true">
-            P
-          </span>
-          <span>
-            <strong>Pressproof</strong>
-            <small>Pre-press workspace</small>
-          </span>
+        <a className="brand" href="/" aria-label="HARLEQUIN PDF viewer home">
+          <img className="brand__mark" src={harlequinLogo} alt="" />
+          <span className="brand__name">HARLEQUIN</span>
+          <span className="brand__separator" aria-hidden="true">/</span>
+          <span className="brand__tool">PDF viewer</span>
         </a>
-        <div className="privacy-pill">
-          <span className="privacy-pill__dot" />
-          Local only · cleared on refresh
+        <div className="topbar__action">
+          <DropZone compact disabled={isBusy} onFile={loadFile} />
         </div>
       </header>
 
@@ -219,7 +229,6 @@ function App() {
             />
 
             <div className="sidebar__actions">
-              <DropZone compact disabled={isBusy} onFile={loadFile} />
               <button className="text-button" type="button" onClick={closeDocument}>
                 Close document
               </button>

@@ -83,6 +83,13 @@ export function PreflightPanel({
   const primaryIntent = preflight.outputIntents[0]
   const hiddenSeparationNames = new Set(hiddenSeparations)
   const coverageByName = new Map(coverage?.channels.map((channel) => [channel.name, channel]))
+  const hasVisibleCoverage = (name: string) =>
+    coverageStatus !== "ready" ||
+    !coverage ||
+    coverageByName.get(name)?.coveragePercent !== 0
+  const displayedProcessColors = preflight.processColors.filter(hasVisibleCoverage)
+  const displayedSpotColors = preflight.spotColors.filter((spot) => hasVisibleCoverage(spot.name))
+  const visibleHiddenSeparationCount = hiddenSeparations.filter(hasVisibleCoverage).length
   const coverageMeta = (name: string, type: string) => {
     const channel = coverageByName.get(name)
     const value = channel ? `${valueFormatter.format(channel.coveragePercent)}%` : "—"
@@ -144,7 +151,7 @@ export function PreflightPanel({
         <div className="separation-toolbar">
           <span>
             {separationPreviewActive
-              ? `${hiddenSeparations.length} hidden`
+              ? `${visibleHiddenSeparationCount} hidden`
               : "All inks visible"}
           </span>
           <button
@@ -171,7 +178,7 @@ export function PreflightPanel({
           </span>
         </button>
         <div className="ink-list">
-          {preflight.processColors.map((name) => {
+          {displayedProcessColors.map((name) => {
             const isVisible = !hiddenSeparationNames.has(name)
             return (
               <div className={`ink-row ${isVisible ? "" : "ink-row--hidden"}`} key={name}>
@@ -195,7 +202,7 @@ export function PreflightPanel({
               </div>
             )
           })}
-          {preflight.spotColors.map((spot) => {
+          {displayedSpotColors.map((spot) => {
             const isVisible = !hiddenSeparationNames.has(spot.name)
             return (
               <div
@@ -233,12 +240,6 @@ export function PreflightPanel({
             )
           })}
         </div>
-        {coverageStatus === "ready" && coverage && (
-          <p className="coverage-note">
-            Page {coverage.pageIndex + 1} mean tint at {coverage.dpi} dpi. Hover a value for
-            equivalent solid area.
-          </p>
-        )}
         {coverageStatus === "error" && coverageError && (
           <p className="inline-error coverage-error">{coverageError}</p>
         )}
