@@ -170,9 +170,19 @@ export function parseSeparationName(colorSpaceName: string) {
   }
 
   if (kind === "DeviceN" || kind === "NChannel") {
+    const declaredComponentCount = /^\d+$/.test(parts[0])
+      ? Number.parseInt(parts[0], 10)
+      : null
+    const alternateSpaceIndex = declaredComponentCount === null ? 0 : 1
+    const namesStartIndex = alternateSpaceIndex + 1
+    const names = parts.slice(
+      namesStartIndex,
+      declaredComponentCount === null ? undefined : namesStartIndex + declaredComponentCount,
+    )
+
     return {
-      alternateSpace: parts[0],
-      names: parts.slice(1).filter(Boolean),
+      alternateSpace: parts[alternateSpaceIndex],
+      names: names.filter(Boolean),
     }
   }
 
