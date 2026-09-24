@@ -16,6 +16,7 @@
 .brand-logo{width:44px;height:44px;display:block;object-fit:contain;flex-shrink:0}@media(max-width:480px){.brand-sub{max-width:125px}.brand-logo{width:36px;height:36px}}
 .file-drop-overlay{position:fixed;inset:16px;z-index:1000;display:flex;align-items:center;justify-content:center;padding:24px;border:3px dashed #437b5d;border-radius:20px;background:rgba(240,248,243,.96);pointer-events:none;text-align:center;color:#173c2a}.file-drop-overlay[hidden]{display:none}.file-drop-overlay strong{display:block;font-size:clamp(24px,4vw,42px);margin-bottom:12px}.file-drop-overlay p{margin:0;font-size:16px}
 .items-panel>.import-hint{margin:0;padding:0 24px 16px}@media(max-width:1050px){.items-panel>.import-hint{padding-inline:18px}}@media(max-width:480px){.items-panel>.import-hint{padding-inline:14px}}
+.job-number-field{grid-column:1/-1;padding-bottom:24px;margin-bottom:24px;border-bottom:1px solid #39515b}.job-number-field>.field-label{margin-top:0}.job-number-error{color:#ffd1c9}.export-dropdown{position:relative}.export-options{position:absolute;right:0;top:calc(100% + 6px);z-index:20;min-width:190px;padding:6px;background:#fff;border:1px solid var(--line);border-radius:6px;box-shadow:0 8px 24px #142c3626}.export-options button{display:block;width:100%;text-align:left;border:0;background:white;padding:10px 12px;border-radius:4px;font-size:.875rem;white-space:nowrap}.export-options button:hover,.export-options button:focus-visible{background:#edf3f5}@media(max-width:480px){.export-options{right:auto;left:0}}
 </style>
 </head>
 <body>
@@ -25,6 +26,12 @@
   <div class="page-heading"><div><p class="eyebrow">PRODUCTION PLANNING</p><h1>Make every position count.</h1><p>Compare lays, reduce overs and find the best cost for your job.</p></div></div>
   <div class="workspace">
   <aside class="setup">
+    <div class="job-number-field">
+      <label class="field-label" for="job-number">Job number (optional)</label>
+      <input class="setup-input" id="job-number" type="text" inputmode="numeric" pattern="[0-9]{5}" maxlength="5" placeholder="e.g. 00123" aria-describedby="job-number-hint job-number-error">
+      <p class="hint" id="job-number-hint">Enter five digits, or leave blank.</p>
+      <p class="hint job-number-error" id="job-number-error" role="alert" hidden>Enter exactly five digits, or leave the job number blank.</p>
+    </div>
     <p class="section-kicker">01 / SHEET SETUP</p><h2>Your imposition</h2>
     <label class="field-label" for="number-up">Positions per sheet</label>
     <div class="up-input"><input id="number-up" type="number" min="1" max="100" step="1"><span>up</span></div>
@@ -523,11 +530,51 @@ function buildLayXlsx(data,count){
   const sheet=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetPr><pageSetUpPr fitToPage="1"/></sheetPr><dimension ref="A1:G${row-1}"/><sheetViews><sheetView workbookViewId="0"/></sheetViews><sheetFormatPr defaultRowHeight="15"/><cols>${cols}</cols><sheetData>${rows.join('')}</sheetData><mergeCells count="${merges.length}">${merges.map(ref=>`<mergeCell ref="${ref}"/>`).join('')}</mergeCells><pageMargins left="0.25" right="0.25" top="0.4" bottom="0.4" header="0.2" footer="0.2"/><pageSetup paperSize="8" orientation="landscape" fitToWidth="1" fitToHeight="0"/></worksheet>`;
   return zipStore({...XLSX_TEMPLATE_PARTS,'xl/worksheets/sheet1.xml':sheet});
 }
+function readJobNumber(){
+  const input=$('job-number'),value=input.value.trim(),valid=value===''||/^[0-9]{5}$/.test(value);
+  input.setAttribute('aria-invalid',String(!valid));$('job-number-error').hidden=valid;
+  if(!valid){input.focus();throw Error('Enter exactly five digits, or leave the job number blank.');}
+  return value;
+}
+function exportData(){
+  if(!result)throw Error('Compare lays and select an option before exporting.');
+  return {...result,jobNumber:readJobNumber()};
+}
+function jobFilePrefix(jobNumber){return jobNumber?`${jobNumber} - `:'';}
+function downloadExport(content,type,filename){
+  const url=URL.createObjectURL(new Blob([content],{type})),link=document.createElement('a');
+  link.href=url;link.download=filename;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
+}
+function buildLayXmlFiles(data,count){
+  const plan=data.options.find(p=>p.count===count);if(!plan)throw Error('Select a calculated lay option before exporting.');
+  const xml=value=>{
+    const text=String(value);
+    if(/[^\u0009\u000A\u000D\u0020-\uD7FF\uE000-\uFFFD\u{10000}-\u{10FFFF}]/u.test(text))throw Error('A variant name or code contains a character that XML cannot represent. Please remove it before exporting.');
+    return escape(text);
+  };
+  const entry=(name,filename,positions)=>`<JOB>\n<ArtworkName>${xml(name)}</ArtworkName>\n<FileName>${xml(filename)}</FileName>\n<Quantity>${positions}</Quantity>\n<Bleed>3.0</Bleed>\n<Page number="1"/>\n</JOB>`;
+  return plan.lays.map((lay,index)=>{
+    const jobs=lay.allocations.map(a=>{
+      const item=data.items[a.item],code=(item.code||'').trim()||'TBC';
+      return entry(item.name,/\.pdf$/i.test(code)?code:`${code}.pdf`,a.positions);
+    });
+    const blank=data.settings.numberUp-lay.allocations.reduce((sum,a)=>sum+a.positions,0);
+    if(blank>0)jobs.push(entry('BLANK','BLANK.pdf',blank));
+    return {name:`${jobFilePrefix(data.jobNumber)}Lay${String(index+1).padStart(2,'0')} - imposition.xml`,xml:`<?xml version="1.0" encoding="UTF-8"?>\n<JOBS>\n${jobs.join('\n')}\n</JOBS>\n`};
+  });
+}
+function exportLayXml(){
+  try{
+    const data=exportData(),files=buildLayXmlFiles(data,selectedCount);
+    if(files.length===1)downloadExport(files[0].xml,'application/xml;charset=utf-8',files[0].name);
+    else downloadExport(zipStore(Object.fromEntries(files.map(file=>[file.name,file.xml]))),'application/zip',`${jobFilePrefix(data.jobNumber)}Imposition-${selectedCount}-lays-XML.zip`);
+    $('calculation-status').textContent=files.length===1?'XML exported. Quantities are positions on the lay.':`${files.length} separate lay XML files exported in a ZIP. Extract the ZIP before importing into your imposition software.`;
+  }catch(e){$('calculation-error').textContent=e.message;$('calculation-error').hidden=false;}
+}
 function exportLayXlsx(){
   try{
-    if(!result)throw Error('Compare lays and select an option before exporting.');
-    const bytes=buildLayXlsx(result,selectedCount),url=URL.createObjectURL(new Blob([bytes],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
-    const a=document.createElement('a');a.href=url;a.download=`Imposition-${selectedCount}-lays.xlsx`;a.click();setTimeout(()=>URL.revokeObjectURL(url),60000);
+    const data=exportData();
+    downloadExport(buildLayXlsx(data,selectedCount),'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',`${jobFilePrefix(data.jobNumber)}Imposition-${selectedCount}-lays.xlsx`);
     $('calculation-status').textContent='XLSX exported. Variant codes included where supplied. Final Quantity and No. of Boxes remain blank for manual entry.';
   }catch(e){$('calculation-error').textContent=e.message;$('calculation-error').hidden=false;}
 }
@@ -546,7 +593,7 @@ function buildA4Report(data, count, created=new Date()) {
   const costs=plan.lays.map((lay,i)=>({material:(lay.sheets+data.settings.makeReady)*data.settings.materialCost/1000,setup:i===0?0:data.settings.setupCost}));
   const name=i=>`<span class="variant-number">${i+1}.</span> ${esc(data.items[i].name)}`;
   const proof=plan.exact?'Minimum sheet count proven for this lay count.':'Best arrangement found; a lower-cost allocation may exist.';
-  const head=(label,subtitle)=>`<header><p class="eyebrow">HARLEQUIN / IMPOSITION REPORT</p><h1>${label}</h1><p class="muted">${subtitle}</p></header>`;
+  const head=(label,subtitle)=>`<header><p class="eyebrow">HARLEQUIN / IMPOSITION REPORT${data.jobNumber?` · JOB ${esc(data.jobNumber)}`:''}</p><h1>${label}</h1><p class="muted">${subtitle}</p></header>`;
   const laySections=plan.lays.map((lay,j)=>{
     const used=lay.allocations.reduce((s,a)=>s+a.positions,0);
     const produced=lay.allocations.reduce((s,a)=>s+a.positions*lay.sheets,0);
@@ -575,8 +622,7 @@ function buildA4Report(data, count, created=new Date()) {
 }
 function exportA4Report(){
   try{
-    if(!result)throw Error('Compare lays and select an option before exporting.');
-    const report=buildA4Report(result,selectedCount);
+    const report=buildA4Report(exportData(),selectedCount);
     const tab=window.open('','_blank');
     if(tab){tab.opener=null;tab.document.open();tab.document.write(report);tab.document.close();}
     else{
@@ -599,7 +645,7 @@ function renderResults(){
     const used=lay.rows.reduce((s,a)=>s+a.positions,0);
     return `<details class="plan-panel lay-panel" ${j===0?'open':''}><summary class="lay-summary"><strong>Lay ${j+1}</strong><span>${fmt(lay.sheets)} production + ${fmt(lay.makeReady)} make-ready = ${fmt(lay.totalSheets)} sheets · ${used}/${up} positions</span></summary><div class="table-scroll"><table class="plan-table"><thead><tr><th>Variant</th><th>Required on lay</th><th>Positions</th><th>Produced</th><th>Overs</th></tr></thead><tbody>${lay.rows.map(a=>`<tr><td><span class="item-label"><span class="swatch" style="--item-color:${colours[a.item%colours.length]}"></span>${a.item+1}. ${escape(a.name)}</span></td><td>${fmt(a.quantity)}</td><td>${a.positions}</td><td>${fmt(a.produced)}</td><td>${fmt(a.overs)}</td></tr>`).join('')}</tbody></table></div><p class="proof">Make-ready sheets are for press setup and do not add finished units. For split variants, requirements are assigned in lay order; overs show units beyond the remaining requirement.</p></details>`;
   }).join('');
-  $('results').innerHTML=`<div class="report-actions"><span>Export the selected ${r.count}-lay option</span><button type="button" class="button" data-export-report>Export A4 report</button><button type="button" class="button" data-export-xlsx>Export XLSX</button></div><div class="metrics"><div class="metric primary"><p class="metric-label">${r.count===result.recommendedCount?'Recommended':'Selected'} comparison cost</p><p class="metric-value cost-value">${money(r.cost)}</p><p class="metric-note">${r.count} ${r.count===1?'lay':'lays'} · first setup excluded</p></div><div class="metric"><p class="metric-label">Total sheets</p><p class="metric-value">${fmt(r.totalSheets)}</p><p class="metric-note">${fmt(r.sheets)} production + ${fmt(r.makeReadySheets)} make-ready</p></div><div class="metric"><p class="metric-label">Total overs</p><p class="metric-value">${fmt(r.overs)}</p><p class="metric-note">${(r.overs/result.required*100).toFixed(1)}% above required units</p></div></div>
+  $('results').innerHTML=`<div class="report-actions"><span>Export the selected ${r.count}-lay option</span><div class="export-dropdown"><button type="button" class="button" id="export-toggle" aria-expanded="false" aria-controls="export-options">Export as <span aria-hidden="true">▾</span></button><div class="export-options" id="export-options" hidden><button type="button" data-export-report>A4 report (PDF)</button><button type="button" data-export-xlsx>XLSX</button><button type="button" data-export-xml>XML (one file per lay)</button></div></div></div><div class="metrics"><div class="metric primary"><p class="metric-label">${r.count===result.recommendedCount?'Recommended':'Selected'} comparison cost</p><p class="metric-value cost-value">${money(r.cost)}</p><p class="metric-note">${r.count} ${r.count===1?'lay':'lays'} · first setup excluded</p></div><div class="metric"><p class="metric-label">Total sheets</p><p class="metric-value">${fmt(r.totalSheets)}</p><p class="metric-note">${fmt(r.sheets)} production + ${fmt(r.makeReadySheets)} make-ready</p></div><div class="metric"><p class="metric-label">Total overs</p><p class="metric-value">${fmt(r.overs)}</p><p class="metric-note">${(r.overs/result.required*100).toFixed(1)}% above required units</p></div></div>
   <div class="plan-panel"><div class="panel-heading"><h3>Compare lay options</h3></div><div class="table-scroll"><table class="comparison-table"><thead><tr><th>Option</th><th>Production sheets</th><th>Make-ready</th><th>Total sheets</th><th>Material</th><th>Extra setups</th><th>Total</th><th>Saving vs ${base.count} ${base.count===1?'lay':'lays'}</th></tr></thead><tbody>${comparison}</tbody></table></div><p class="proof">${allExact?'Minimum sheet counts proven for each lay count shown.':'Best arrangements found in a bounded search; a better arrangement may exist.'} ${r.exact?'Selected plan: minimum sheet count proven. ':''}Maximum empty positions per lay: ${result.settings.maxEmpty??'no limit'}. Search limit: ${result.settings.maxLays} lays${!result.settings.allowSplit&&result.settings.maxLays>result.items.length?` (${result.items.length} possible without splitting)`:''}. ${result.settings.allowSplit?'Splitting allowed; '+r.splitVariants+' variants span multiple lays.':'Each variant stays on one lay.'} Click an option to inspect its production plan.</p></div>
   <div class="plan-panel"><div class="panel-heading"><h3>Combined production totals</h3></div><div class="table-scroll"><table class="plan-table"><thead><tr><th>Item</th><th>Required</th><th>Lay(s)</th><th>Produced</th><th>Overs</th></tr></thead><tbody>${rows.map((v,i)=>`<tr><td><span class="item-label"><span class="swatch" style="--item-color:${colours[i%colours.length]}"></span>${i+1}. ${escape(v.name)}</span></td><td>${fmt(v.quantity)}</td><td>${v.where.join(', ')}</td><td>${fmt(v.produced)}</td><td>${fmt(v.overs)}</td></tr>`).join('')}</tbody><tfoot><tr><td>Total</td><td>${fmt(result.required)}</td><td>${r.count}</td><td>${fmt(result.required+r.overs)}</td><td>${fmt(r.overs)}</td></tr></tfoot></table></div></div>
   ${layPanels}<p class="cost-footnote">Material: production + make-ready sheets, divided by 1,000 × ${money(result.settings.materialCost)}. Extra setups: (lays − 1) × ${money(result.settings.setupCost)}. Material is charged proportionally, not rounded to packs of 1,000. Includes make-ready material. Excludes the first setup charge, other spoilage and other running costs. Equal-cost options favour fewer lays.</p>`;
@@ -610,7 +656,15 @@ $('add-item').addEventListener('click',()=>{if(items.length>=500)return;items.pu
 for(const id of ['number-up','max-empty','make-ready','material-cost','setup-cost','max-lays','allow-split'])$(id).addEventListener('input',invalidate);
 $('calculate-button').addEventListener('click',calculate);
 $('toggle-items').addEventListener('click',()=>setItemsCollapsed(!$('items-content').hidden));
-$('results').addEventListener('click',e=>{if(e.target.closest('[data-export-xlsx]')){exportLayXlsx();return;}if(e.target.closest('[data-export-report]')){exportA4Report();return;}const button=e.target.closest('[data-plan]');if(!button)return;selectedCount=Number(button.dataset.plan);renderResults();$('results').querySelector(`[data-plan="${selectedCount}"]`).focus();});
+function setExportOpen(open,restoreFocus=false){
+  const button=$('export-toggle'),options=$('export-options');if(!button||!options)return;
+  options.hidden=!open;button.setAttribute('aria-expanded',String(open));if(restoreFocus)button.focus();
+}
+$('job-number').addEventListener('input',()=>{const valid=$('job-number').value.trim()===''||/^[0-9]{5}$/.test($('job-number').value.trim());$('job-number').setAttribute('aria-invalid',String(!valid));$('job-number-error').hidden=valid;});
+document.addEventListener('click',e=>{if(!e.target.closest('.export-dropdown'))setExportOpen(false);});
+document.addEventListener('focusin',e=>{if(!e.target.closest('.export-dropdown'))setExportOpen(false);});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('export-options')&&!$('export-options').hidden){setExportOpen(false,true);}});
+$('results').addEventListener('click',e=>{if(e.target.closest('#export-toggle')){setExportOpen($('export-options').hidden);return;}if(e.target.closest('[data-export-xml]')){setExportOpen(false,true);exportLayXml();return;}if(e.target.closest('[data-export-xlsx]')){setExportOpen(false,true);exportLayXlsx();return;}if(e.target.closest('[data-export-report]')){setExportOpen(false,true);exportA4Report();return;}const button=e.target.closest('[data-plan]');if(!button)return;selectedCount=Number(button.dataset.plan);renderResults();$('results').querySelector(`[data-plan="${selectedCount}"]`).focus();});
 $('import-button').addEventListener('click',()=>$('import-file').click());
 let importingFile=false;
 async function importJobFiles(files){
