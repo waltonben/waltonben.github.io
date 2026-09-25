@@ -48,7 +48,7 @@
     <label class="field-label" for="setup-cost">Each additional lay (£)</label>
     <input class="setup-input" id="setup-cost" type="number" min="0" max="1000000000" step="0.01" value="300">
     <label class="field-label" for="max-lays">Maximum lays to compare</label>
-    <input class="setup-input" id="max-lays" type="number" min="1" max="500" step="1" value="5">
+    <input class="setup-input" id="max-lays" type="number" min="1" max="1000" step="1" value="5">
     <label class="split-option"><input id="allow-split" type="checkbox" aria-describedby="split-hint"><span>Allow variants to be split across multiple lays</span></label>
     <p class="hint" id="split-hint">Unchecked: each variant stays on one lay. Multiple lays can still be used.</p>
     <button type="button" id="calculate-button" class="compare-button">Compare lays</button>
@@ -63,7 +63,7 @@
       <div class="table-scroll"><table class="entry-table"><thead><tr><th class="index-col" scope="col">#</th><th scope="col">Variant name</th><th scope="col">Variant code <span class="optional-label">(optional)</span></th><th class="quantity-col" scope="col">Required quantity</th><th class="delete-col" scope="col"><span class="sr-only">Remove item</span></th></tr></thead><tbody id="items-body"></tbody></table></div>
       <div class="items-footer"><button class="text-button" id="add-item" type="button">+ Add item</button><details class="csv-help"><summary>Import format &amp; sample</summary><div class="csv-instructions"><p>CSV or XLSX: use three columns in this order: Variant Name, Variant Code, Quantity. Name and quantity are required; leave code blank if unused. For XLSX, the first visible worksheet is imported. A header row is optional. Existing two-column name/quantity files are also accepted. Keep variant codes as text to preserve leading zeros. Import replaces the current list. Files are read in your browser.</p><pre>Variant Name,Variant Code,Quantity
 Item A,AQL10020,10000
-Item B,,25000</pre><p>For CSV, save as CSV UTF-8 (comma delimited). Names containing commas must be quoted, for example: &quot;Item A, blue&quot;,AQL10020,10000. Use quantities without thousands separators, or quote them: &quot;10,000&quot;. Blank rows are ignored. Maximum 5 MB and 500 variants.</p><a href="data:text/csv;charset=utf-8,Variant%20Name%2CVariant%20Code%2CQuantity%0D%0AItem%20A%2CAQL10020%2C10000%0D%0AItem%20B%2C%2C25000%0D%0A" download="sample-variants.csv">Download sample CSV</a></div></details></div>
+Item B,,25000</pre><p>For CSV, save as CSV UTF-8 (comma delimited). Names containing commas must be quoted, for example: &quot;Item A, blue&quot;,AQL10020,10000. Use quantities without thousands separators, or quote them: &quot;10,000&quot;. Blank rows are ignored. Maximum 5 MB and 1,000 variants.</p><a href="data:text/csv;charset=utf-8,Variant%20Name%2CVariant%20Code%2CQuantity%0D%0AItem%20A%2CAQL10020%2C10000%0D%0AItem%20B%2C%2C25000%0D%0A" download="sample-variants.csv">Download sample CSV</a></div></details></div>
       </div>
     </section>
     <section class="results-section" aria-labelledby="results-heading">
@@ -89,9 +89,9 @@ function validateJob(items, o) {
   if (!Number.isInteger(o.numberUp) || o.numberUp < 1 || o.numberUp > 100) throw Error('Enter a whole number-up between 1 and 100.');
   if(o.maxEmpty!=null && (!Number.isInteger(o.maxEmpty)||o.maxEmpty<0||o.maxEmpty>o.numberUp)) throw Error('Maximum empty positions must be a whole number from 0 to the number-up, or left blank.');
   if (!Number.isInteger(o.makeReady??0) || (o.makeReady??0)<0 || (o.makeReady??0)>1e9) throw Error('Enter make-ready as a whole number from 0 to 1,000,000,000 sheets per lay.');
-  if (!Number.isInteger(o.maxLays) || o.maxLays < 1 || o.maxLays > 500) throw Error('Enter a maximum of 1 to 500 lays.');
+  if (!Number.isInteger(o.maxLays) || o.maxLays < 1 || o.maxLays > 1000) throw Error('Enter a maximum of 1 to 1,000 lays.');
   for (const key of ['materialCost','setupCost']) if (!Number.isFinite(o[key]) || o[key] < 0 || o[key] > 1e9) throw Error('Enter both costs as numbers from £0 to £1,000,000,000.');
-  if (!Array.isArray(items) || !items.length || items.length > 500) throw Error('Add between 1 and 500 items.');
+  if (!Array.isArray(items) || !items.length || items.length > 1000) throw Error('Add between 1 and 1,000 items.');
   items.forEach((v,i) => {
     if(v.code!==undefined && (typeof v.code!=='string'||v.code.length>500)) throw Error(`Enter a variant code of no more than 500 characters for item ${i+1}.`);
     if (typeof v.name !== 'string' || !v.name.trim()) throw Error(`Give item ${i+1} a name.`);
@@ -277,7 +277,7 @@ function parseCsv(text) {
     endField();
     if(row.some(value=>value!==''))rows.push({fields:row,line:rowLine});
     row=[];
-    if(rows.length>501)throw Error('Use no more than 500 variants, plus an optional header row. No items were imported.');
+    if(rows.length>1001)throw Error('Use no more than 1,000 variants, plus an optional header row. No items were imported.');
   };
   for(let i=0;i<text.length;i++) {
     const c=text[i];
@@ -308,7 +308,7 @@ function parseImportRows(rows,format){
   const codeHeader=width===2||['variant code','code'].includes(normalise(first[1]));
   if(nameHeader&&quantityHeader&&codeHeader)rows.shift();
   if(!rows.length)throw Error(`The ${format} contains a header but no variants.`);
-  if(rows.length>500)throw Error('Use no more than 500 variants. No items were imported.');
+  if(rows.length>1000)throw Error('Use no more than 1,000 variants. No items were imported.');
   return rows.map(({fields,line})=>{
     if(fields.length!==width)throw Error(`${format} row ${line}: expected ${width} columns. For a blank code, keep the empty middle column (Name,,Quantity). Quote fields containing commas. No items were imported.`);
     const name=fields[0],code=width===3?fields[1]:'',quantity=parseQuantity(fields[width-1]);
@@ -417,7 +417,7 @@ async function parseXlsx(buffer){
       fields[col]=value;maxColumn=Math.max(maxColumn,col);
     }
     if(fields.some(Boolean))rows.push({fields,line});
-    if(rows.length>501)throw Error('Use no more than 500 variants, plus an optional header row. No items were imported.');
+    if(rows.length>1001)throw Error('Use no more than 1,000 variants, plus an optional header row. No items were imported.');
   }
   const width=maxColumn===2?3:2;
   for(const row of rows)row.fields=row.fields.slice(0,width);
@@ -434,7 +434,7 @@ let nextId=1,items=[{id:nextId++,name:'',code:'',quantity:''}],result=null,selec
 function drawItems(){
   $('item-count').textContent=items.length;
   $('items-body').innerHTML=items.length?items.map((i,n)=>`<tr data-id="${i.id}"><td class="row-index">${String(n+1).padStart(2,'0')}</td><td><input class="name-input" aria-label="Item ${n+1} name" value="${escape(i.name)}" placeholder="Item name" maxlength="500"></td><td><input class="code-input" aria-label="Item ${n+1} variant code (optional)" value="${escape(i.code||'')}" placeholder="Optional" maxlength="500"></td><td><input class="qty-input" aria-label="Item ${n+1} required quantity" value="${escape(i.quantity)}" inputmode="numeric" placeholder="e.g. 10,000"></td><td><button class="remove" type="button" aria-label="Remove item ${n+1}" title="Remove item">×</button></td></tr>`).join(''):'<tr><td colspan="5" class="empty-row">Add an item or import a CSV or XLSX list to begin.</td></tr>';
-  $('add-item').disabled=items.length>=500;
+  $('add-item').disabled=items.length>=1000;
 }
 function setItemsCollapsed(collapsed){
   $('items-content').hidden=collapsed;
@@ -652,7 +652,7 @@ function renderResults(){
 }
 $('items-body').addEventListener('input',e=>{const row=e.target.closest('[data-id]');if(!row)return;const item=items.find(i=>i.id===Number(row.dataset.id));item[e.target.classList.contains('qty-input')?'quantity':e.target.classList.contains('code-input')?'code':'name']=e.target.value;invalidate();});
 $('items-body').addEventListener('click',e=>{const button=e.target.closest('.remove');if(!button)return;const index=items.findIndex(i=>i.id===Number(button.closest('[data-id]').dataset.id));items.splice(index,1);drawItems();invalidate();const buttons=$('items-body').querySelectorAll('.remove');(buttons[Math.min(index,buttons.length-1)]||$('add-item')).focus();});
-$('add-item').addEventListener('click',()=>{if(items.length>=500)return;items.push({id:nextId++,name:'',code:'',quantity:''});drawItems();invalidate();$('items-body').lastElementChild.querySelector('input').focus();});
+$('add-item').addEventListener('click',()=>{if(items.length>=1000)return;items.push({id:nextId++,name:'',code:'',quantity:''});drawItems();invalidate();$('items-body').lastElementChild.querySelector('input').focus();});
 for(const id of ['number-up','max-empty','make-ready','material-cost','setup-cost','max-lays','allow-split'])$(id).addEventListener('input',invalidate);
 $('calculate-button').addEventListener('click',calculate);
 $('toggle-items').addEventListener('click',()=>setItemsCollapsed(!$('items-content').hidden));
@@ -719,8 +719,8 @@ if(context?.registerTool){
   const lifecycle=new AbortController();
   const register=tool=>{try{Promise.resolve(context.registerTool(tool,{signal:lifecycle.signal})).catch(()=>{});}catch{}};
   register({name:'read_imposition_plan',description:'Read the current lay cost comparison, allocations, or validation status.',inputSchema:{type:'object',properties:{},additionalProperties:false},annotations:{readOnlyHint:true,untrustedContentHint:true},execute:()=>result||{status:$('calculation-status').textContent,error:$('calculation-error').hidden?null:$('calculation-error').textContent}});
-  register({name:'set_imposition_job',description:'Replace items and number-up, retaining the visible cost and splitting settings. Calculate if all inputs are valid.',inputSchema:{type:'object',properties:{numberUp:{type:'integer',minimum:1,maximum:100},items:{type:'array',minItems:1,maxItems:500,items:{type:'object',properties:{name:{type:'string',minLength:1},code:{type:'string',maxLength:500},quantity:{type:'integer',minimum:1,maximum:1000000000}},required:['name','quantity'],additionalProperties:false}}},required:['numberUp','items'],additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:true},execute:input=>{
-    validateJob(input.items,{numberUp:input.numberUp,maxLays:500,materialCost:0,setupCost:300});
+  register({name:'set_imposition_job',description:'Replace items and number-up, retaining the visible cost and splitting settings. Calculate if all inputs are valid.',inputSchema:{type:'object',properties:{numberUp:{type:'integer',minimum:1,maximum:100},items:{type:'array',minItems:1,maxItems:1000,items:{type:'object',properties:{name:{type:'string',minLength:1},code:{type:'string',maxLength:500},quantity:{type:'integer',minimum:1,maximum:1000000000}},required:['name','quantity'],additionalProperties:false}}},required:['numberUp','items'],additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:true},execute:input=>{
+    validateJob(input.items,{numberUp:input.numberUp,maxLays:1000,materialCost:0,setupCost:300});
     items=input.items.map(i=>({name:i.name,code:i.code||'',quantity:String(i.quantity),id:nextId++}));$('number-up').value=String(input.numberUp);drawItems();calculate();return {status:'Job entered. Read the plan after the calculation completes.',error:$('calculation-error').hidden?null:$('calculation-error').textContent};
   }});
   window.addEventListener('pagehide',()=>{lifecycle.abort();stopCalculation();},{once:true});
