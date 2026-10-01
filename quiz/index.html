@@ -1,1 +1,31 @@
-
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Induction & Refresher | Harlequin Print Group</title>
+<meta name="description" content="Watch the Harlequin company induction and refresher video, then complete the knowledge quiz.">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23424d5d'/%3E%3Cpath d='M16 4L28 16 16 28 4 16Z' fill='%238aa6bd'/%3E%3Cpath d='M16 4V28L4 16Z' fill='%23617991'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="styles.css"><script src="app.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to main content</a>
+<header class="header"><div class="header-inner"><a class="brand" href="#" aria-label="Harlequin induction home"><img src="assets/harlequin-logo.svg" alt="Harlequin Print Group" width="334" height="61"></a><span class="header-label">People & workplace</span></div></header>
+<main id="main">
+<div class="intro"><div><p class="eyebrow">WELCOME TO HARLEQUIN</p><h1>Company induction<br><span>& refresher.</span></h1><p class="lead">A shared understanding. A confident start.<br>Watch the video, then complete the knowledge quiz.</p></div><div class="intro-note"><span class="line"></span><p>For our people.<br><strong>For everyone joining us.</strong></p></div></div>
+<ol class="steps" aria-label="Induction steps"><li class="current" id="step-watch"><span>01</span> Watch the video</li><li id="step-details"><span>02</span> Select your role</li><li id="step-quiz"><span>03</span> Complete the quiz</li></ol>
+<section id="watch-view" class="workspace" aria-label="Induction video and role selection">
+<div class="video-column"><div class="section-heading"><h2>The induction & refresher video</h2><span class="small-label">STEP 01</span></div>
+<div class="video-frame" id="video-container"><div class="video-placeholder"><img src="assets/harlequin-logo.svg" alt="" width="334" height="61"><div class="placeholder-divider"></div><p class="video-title">Company induction<br>& refresher</p><p class="video-pending">Video awaiting upload</p></div></div>
+<div class="video-caption"><span class="caption-icon" aria-hidden="true">i</span><p id="video-guidance">The induction video will appear here once it has been provided.</p></div></div>
+<aside class="details"><p class="eyebrow">STEP 02</p><h2>Before you take<br>the quiz</h2><p class="details-copy">Tell us how you’re joining Harlequin.</p>
+<form id="role-form"><label for="role">I am a</label><select id="role" name="role" required><option value="">Select your role</option><option value="Harlequin Employee">Harlequin Employee</option><option value="Agency">Agency</option></select>
+<div id="agency-field" hidden><label for="agency">Agency name <span class="required">(required)</span></label><input id="agency" name="agency" autocomplete="organization" maxlength="150" placeholder="Enter your agency name"></div>
+<p class="form-error" id="role-error" role="alert" hidden></p>
+<div class="quiz-ready"><span class="quiz-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/></svg></span><div><strong>Ready for the next step?</strong><p>Once you’ve watched the video, check your understanding.</p></div></div>
+<button type="submit" class="primary">Take the quiz</button><p class="preview-note" id="pending-note">Preview · Quiz content awaiting approval</p></form></aside>
+</section>
+<section id="quiz-view" class="quiz-view" hidden aria-labelledby="quiz-heading"><button class="back" id="back-video" type="button">Back to the video</button><div class="quiz-head"><div><p class="eyebrow">STEP 03</p><h2 id="quiz-heading" tabindex="-1">Knowledge quiz</h2><p id="participant" class="participant"></p></div><span class="quiz-type">INDUCTION & REFRESHER</span></div><div id="quiz-body"></div></section>
+<div class="support"><strong>Need a hand?</strong><p>If you need help with the induction or quiz, speak to your Harlequin contact.</p></div>
+</main>
+<footer><div><span>© <span id="year">2026</span> Harlequin Print Group</span><a href="https://harlequinprintgroup.co.uk/" target="_blank" rel="noopener">Harlequin Print Group website</a></div></footer>
+</body></html>

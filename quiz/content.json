@@ -1,0 +1,341 @@
+{
+  "video": {
+    "url": "",
+    "title": "Company induction & refresher",
+    "captionsUrl": ""
+  },
+  "questions": [
+    {
+      "question": "What MUST happen when materials arrive at intake?",
+      "options": [
+        "Acceptance checks",
+        "Timely offloading",
+        "Cleaning and sterilisation"
+      ],
+      "answer": null,
+      "sourcePage": 9,
+      "proposedAnswer": 0,
+      "answerBasis": "supported",
+      "referencePages": [
+        6
+      ],
+      "explanation": "Materials must be checked before booking in, against the agreed specification."
+    },
+    {
+      "question": "How are foreign body hazards controlled?",
+      "options": [
+        "Using experience",
+        "Using equipment",
+        "Using electronics"
+      ],
+      "answer": null,
+      "sourcePage": 9,
+      "proposedAnswer": 1,
+      "answerBasis": "inferred",
+      "referencePages": [
+        2,
+        4,
+        7
+      ],
+      "explanation": "The booklet describes approved knives, blade checks and intact equipment to control foreign bodies. Of the options, using equipment is the closest fit; it does not state this answer explicitly."
+    },
+    {
+      "question": "What is carried out after equipment has been repaired or maintained by engineering?",
+      "options": [
+        "Monitoring",
+        "Cleaning",
+        "Surveying"
+      ],
+      "answer": null,
+      "sourcePage": 9,
+      "proposedAnswer": 1,
+      "answerBasis": "inferred",
+      "referencePages": [
+        4,
+        5
+      ],
+      "explanation": "Cleaning controls contamination and removes debris. The booklet does not explicitly describe the step immediately after engineering work, so cleaning is the likely intended answer."
+    },
+    {
+      "question": "Why are the physical characteristics of a product checked?",
+      "options": [
+        "To enable customer to recognise it when buying",
+        "To meet the customer specification",
+        "To ensure that product can be made correctly"
+      ],
+      "answer": null,
+      "sourcePage": 9,
+      "proposedAnswer": 1,
+      "answerBasis": "supported",
+      "referencePages": [
+        6
+      ],
+      "explanation": "Receipt checks ensure materials match the agreed specification, and processing checks confirm that the product is as it should be."
+    },
+    {
+      "question": "What is the BEST course of action taken to take if you see a full waste bin?",
+      "options": [
+        "Avoid it",
+        "Empty it",
+        "Report it"
+      ],
+      "answer": null,
+      "sourcePage": 9,
+      "proposedAnswer": 1,
+      "answerBasis": "inferred",
+      "referencePages": [
+        4,
+        5
+      ],
+      "explanation": "Clean As You Go and the waste guidance require tidying and preventing waste from piling up. Emptying the bin is the likely intended option, though the booklet does not specify the response to a full bin."
+    },
+    {
+      "question": "What is material authenticity?",
+      "options": [
+        "Material that is what it says it is",
+        "Material that is kind to the planet",
+        "Material that is processed safely"
+      ],
+      "answer": null,
+      "sourcePage": 9,
+      "proposedAnswer": 0,
+      "answerBasis": "inferred",
+      "referencePages": [
+        6
+      ],
+      "explanation": "The booklet requires evidence for claims about materials and conformity to specification. Authenticity is not explicitly defined; the first option is the likely intended definition."
+    },
+    {
+      "question": "Why is it important to have security in place?",
+      "options": [
+        "To prevent deliberate or malicious contamination of the product",
+        "To maintain order on site for incoming traffic",
+        "To keep employees on site safe from harm"
+      ],
+      "answer": null,
+      "sourcePage": 9,
+      "proposedAnswer": 0,
+      "answerBasis": "inferred",
+      "referencePages": [
+        2
+      ],
+      "explanation": "Site access is controlled to protect against contamination. Deliberate or malicious contamination is not explicitly discussed, so the first option is a best-fit inference."
+    },
+    {
+      "question": "What needs the MOST protection on site from pests?",
+      "options": [
+        "Drains and guttering",
+        "Product and materials",
+        "Equipment and tools"
+      ],
+      "answer": null,
+      "sourcePage": 9,
+      "proposedAnswer": 1,
+      "answerBasis": "supported",
+      "referencePages": [
+        5
+      ],
+      "explanation": "Pests can damage or contaminate the product; closed doors and tidy waste areas help prevent entry and infestation."
+    },
+    {
+      "question": "What impact does unclean equipment have when microbes are left behind?",
+      "options": [
+        "Complaints and sick consumers",
+        "Swabs cannot be used for testing",
+        "Procedures will need retraining"
+      ],
+      "answer": null,
+      "sourcePage": 9,
+      "proposedAnswer": 0,
+      "answerBasis": "supported",
+      "referencePages": [
+        3
+      ],
+      "explanation": "Unclean equipment can introduce microbes, and contamination can make consumers sick. Complaints are a likely consequence."
+    },
+    {
+      "question": "What must you do if your spectacles are broken during working hours?",
+      "options": [
+        "Report the breakage to your supervisor immediately",
+        "Report the breakage to your supervisor after break",
+        "Report the breakage to your supervisor before leaving site"
+      ],
+      "answer": null,
+      "sourcePage": 9,
+      "proposedAnswer": 0,
+      "answerBasis": "supported",
+      "referencePages": [
+        4
+      ],
+      "explanation": "Breakages must be reported to the supervisor immediately to protect product and materials."
+    },
+    {
+      "question": "Why is waste put into separate storage bins?",
+      "options": [
+        "It’ cleaned and collected on different days",
+        "There are different uses for waste materials",
+        "All waste must be recycled correctly"
+      ],
+      "answer": null,
+      "sourcePage": 10,
+      "proposedAnswer": null,
+      "answerBasis": "unresolved",
+      "referencePages": [
+        5
+      ],
+      "explanation": "The waste section requires proper disposal, labelled bins and closed outside containers, but gives no reason for separating waste. It cannot resolve the choice between different uses and correct recycling."
+    },
+    {
+      "question": "What happens when glass breakage occurs?",
+      "options": [
+        "The cleaning of the area is delayed",
+        "Product is put on hold",
+        "Production is slowed down"
+      ],
+      "answer": null,
+      "sourcePage": 10,
+      "proposedAnswer": 1,
+      "answerBasis": "inferred",
+      "referencePages": [
+        4
+      ],
+      "explanation": "Surrounding product and materials must be checked for glass contamination, and unsafe product must be held under corrective-action procedures. Holding product is the likely answer, but the booklet does not explicitly say that every glass breakage automatically triggers a hold."
+    },
+    {
+      "question": "What information does the weight of material delivery provides?",
+      "options": [
+        "Vulnerability",
+        "Traceability",
+        "Affordability"
+      ],
+      "answer": null,
+      "sourcePage": 10,
+      "proposedAnswer": 1,
+      "answerBasis": "supported",
+      "referencePages": [
+        6
+      ],
+      "explanation": "The amount of material received is recorded for traceability."
+    },
+    {
+      "question": "Why does clean equipment need to be kept clean after it’s washed?",
+      "options": [
+        "So, it doesn’t’ contaminate the product",
+        "So, it can be tested before it’s used again",
+        "So that it is checked for damage"
+      ],
+      "answer": null,
+      "sourcePage": 10,
+      "proposedAnswer": 0,
+      "answerBasis": "supported",
+      "referencePages": [
+        4,
+        5
+      ],
+      "explanation": "Cleaning controls contamination, and cleaning equipment must itself be kept clean."
+    },
+    {
+      "question": "How do fabric conveyors contaminate the product?",
+      "options": [
+        "The product of them is not correctly spaced out",
+        "Frayed pieces can fall off them and get into the product",
+        "Too much product on them makes them unsafe"
+      ],
+      "answer": null,
+      "sourcePage": 10,
+      "proposedAnswer": 1,
+      "answerBasis": "inferred",
+      "referencePages": [
+        7
+      ],
+      "explanation": "Broken equipment parts can fall into product. The same principle supports frayed conveyor pieces, although fabric conveyors are not specifically mentioned."
+    },
+    {
+      "question": "Which of the following best describes a key principle of Good Manufacturing Practices (GMP) in food safety?",
+      "options": [
+        "Using only organic ingredients in all products",
+        "Ensuring that all employees wash their hands before handling food",
+        "Labelling food products with promotional offers"
+      ],
+      "answer": null,
+      "sourcePage": 10,
+      "proposedAnswer": 1,
+      "answerBasis": "supported",
+      "referencePages": [
+        3
+      ],
+      "explanation": "Handwashing removes microbes and is required before entering processing and handling areas."
+    },
+    {
+      "question": "Which of the following is a personal hygiene requirement under GMP?",
+      "options": [
+        "Wearing perfumes while working",
+        "Eating in the production area",
+        "Wearing PPE"
+      ],
+      "answer": null,
+      "sourcePage": 10,
+      "proposedAnswer": 2,
+      "answerBasis": "supported",
+      "referencePages": [
+        3
+      ],
+      "explanation": "PPE protects personnel and the product and is included under contamination controls."
+    },
+    {
+      "question": "Which of the following practices violates GMP?",
+      "options": [
+        "Storing chemicals separately",
+        "Using broken or damaged equipment",
+        "Keeping food covered during storage"
+      ],
+      "answer": null,
+      "sourcePage": 10,
+      "proposedAnswer": 1,
+      "answerBasis": "supported",
+      "referencePages": [
+        7
+      ],
+      "explanation": "Equipment must be intact and checked for damage; damage or malfunction must be reported immediately."
+    },
+    {
+      "question": "If you have a cut or sore, what should you do?",
+      "options": [
+        "Cover it will company issue blue plaster",
+        "Cover it with skin coloured plaster",
+        "Sign out of work and go home"
+      ],
+      "answer": null,
+      "sourcePage": 10,
+      "proposedAnswer": 0,
+      "answerBasis": "supported",
+      "referencePages": [
+        2
+      ],
+      "explanation": "Only site-issued blue plasters are allowed."
+    },
+    {
+      "question": "Which information is essential for food traceability?",
+      "options": [
+        "Product colour and shape",
+        "Batch or lot number, supplier, and destination",
+        "Customer feedback"
+      ],
+      "answer": null,
+      "sourcePage": 10,
+      "proposedAnswer": 1,
+      "answerBasis": "supported",
+      "referencePages": [
+        4,
+        6
+      ],
+      "explanation": "Traceability covers materials from delivery through processing, storage and dispatch; supplier batch or lot codes are recorded at intake."
+    }
+  ],
+  "quiz": {
+    "title": "Food Safety and GMP for Manufacturing Food Packaging",
+    "source": "Harlequin Refresher Training Booklet · April 2025 · pages 9–10",
+    "answerKeyApproved": false,
+    "keyStatus": "proposed"
+  }
+}
