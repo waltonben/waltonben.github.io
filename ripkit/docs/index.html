@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="RipKit is a Chrome extension for finding and saving website fonts, images and SVGs, and exploring a page’s design.">
+<title>RipKit — Website assets, in one place</title>
+<link rel="icon" href="./icon.png">
+<style>
+:root{color-scheme:dark;--page:#120e21;--ink:#f8f6ff;--soft:#c8bfdc;--accent:#d2baff;--line:#3d3255;--panel:#201831}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 75% 0%,#291b45 0%,transparent 48rem),var(--page);color:var(--ink);font:16px/1.6 system-ui,sans-serif}
+.wrap{width:min(1120px,calc(100% - 40px));margin:auto}a{color:inherit}a:focus-visible{outline:2px solid var(--accent);outline-offset:5px}
+header,footer{display:flex;justify-content:space-between;align-items:center;gap:18px;padding:22px 0;border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:10px;font-size:20px;font-weight:750;text-decoration:none}.brand img{border-radius:9px}nav{display:flex;gap:20px;font-size:14px}nav a,footer a{color:var(--soft);text-underline-offset:4px}
+.hero{display:grid;grid-template-columns:1.1fr 1fr;gap:50px;align-items:center;padding:85px 0 65px}
+h1,h2,h3,p{margin:0}h1{font-size:clamp(44px,6.5vw,80px);line-height:1.02;letter-spacing:-.068em;max-width:10ch}h1 span{color:var(--accent)}.lead{color:var(--soft);font-size:19px;margin:22px 0;max-width:42ch}
+.actions{display:flex;align-items:center;gap:18px;flex-wrap:wrap}.primary{display:inline-block;background:var(--accent);color:#20132e;font-weight:750;text-decoration:none;padding:12px 20px;border-radius:9px}.primary:hover{background:#e3d3ff}.meta{font-size:13px;color:var(--soft);margin-top:14px}
+.preview{border:1px solid var(--line);border-radius:18px;background:var(--panel);padding:20px;box-shadow:0 20px 65px #0b071966}
+.preview-top,.preview-tabs{display:flex;gap:12px;align-items:center}.preview-top{font-size:14px;font-weight:700;justify-content:space-between}.preview-top small{color:var(--soft);font-weight:400}
+.preview-tabs{margin:15px 0;border-bottom:1px solid var(--line);font-size:13px;color:var(--soft)}.preview-tabs span{padding:5px 4px}.preview-tabs span:last-child{border-bottom:2px solid var(--accent);color:var(--ink)}
+.specimen{padding:14px;border:1px solid var(--line);border-radius:9px;margin-bottom:13px}.specimen strong{display:block;font-size:clamp(23px,3.4vw,42px);line-height:1.1;letter-spacing:-.045em}.specimen small{color:var(--soft)}
+.swatches{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.swatches div{min-width:0}.swatches i{display:block;height:48px;border-radius:6px;border:1px solid #ffffff22}.swatches small{font:11px ui-monospace,monospace;color:var(--soft)}
+.features{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;padding-bottom:64px}.feature,.install{border:1px solid var(--line);border-radius:13px;background:var(--panel);padding:22px}.feature h3{font-size:19px}.feature p,.install li,.install>p{color:var(--soft)}
+.install{padding:clamp(20px,4vw,40px);margin-bottom:45px}.install h2{font-size:32px;letter-spacing:-.035em}.install ol{padding-left:23px;margin-bottom:0}.install li+li{margin-top:8px}.install code{color:var(--ink);background:#332647;padding:2px 5px;border-radius:4px}
+footer{border-top:1px solid var(--line);border-bottom:0;color:var(--soft);font-size:13px}
+@media(max-width:760px){.hero,.features{grid-template-columns:1fr}.hero{padding:48px 0;gap:28px}.features{padding-bottom:34px}}
+@media(max-width:380px){nav{gap:10px}.wrap{width:calc(100% - 28px)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header><a class="brand" href="./"><img src="./icon.png" width="36" height="36" alt="">RipKit</a><nav aria-label="Main"><a href="#install">Installation</a><a id="source" href="./RipKit-Chrome.zip" download>Source files</a></nav></header>
+<main>
+<section class="hero" aria-labelledby="hero-title">
+<div><h1 id="hero-title">Website assets, <span>in one place.</span></h1>
+<p class="lead">Explore the fonts, images and SVGs on a webpage. Download what you need and turn the page’s visual styles into a brand report.</p>
+<div class="actions"><a class="primary" href="./RipKit-Chrome.zip" download>Download for Chrome ↓</a><a href="#install">How to install</a></div>
+<p class="meta">Version 1.4.16 · Unpacked Chrome extension · Includes source</p>
+</div>
+<div class="preview" aria-label="Illustrative preview of the RipKit Brand tab">
+<div class="preview-top">Brand mood board <small>Example preview</small></div>
+<div class="preview-tabs" aria-hidden="true"><span>Fonts</span><span>Images</span><span>Brand</span></div>
+<div class="specimen"><small>Typography</small><strong>Headline &amp; body</strong></div>
+<div class="swatches">
+<div><i style="background:#231739"></i><small>#231739</small></div>
+<div><i style="background:#a786ef"></i><small>#A786EF</small></div>
+<div><i style="background:#d2baff"></i><small>#D2BAFF</small></div>
+<div><i style="background:#f8f6ff"></i><small>#F8F6FF</small></div>
+</div>
+</div>
+</section>
+<section class="features" aria-label="What RipKit finds">
+<article class="feature"><h3>Fonts</h3><p>Preview type families and weights. Save available webfonts in their native TTF or OTF format.</p></article>
+<article class="feature"><h3>Images &amp; SVGs</h3><p>Browse photos and vectors, extract individual symbols from SVG sprites and download assets one at a time or as a ZIP.</p></article>
+<article class="feature"><h3>Brand details</h3><p>Review colours, type styles and buttons in a mood board. Save a brand report through Chrome’s A4 PDF print option.</p></article>
+</section>
+<section class="install" id="install" aria-labelledby="install-title">
+<h2 id="install-title">Install in Chrome</h2>
+<ol>
+<li>Download and unzip <strong>RipKit-Chrome.zip</strong>.</li>
+<li>Enter <code>chrome://extensions</code> in Chrome’s address bar and switch on <strong>Developer mode</strong>.</li>
+<li>Click <strong>Load unpacked</strong> and select the extracted folder containing <code>manifest.json</code>.</li>
+<li>Open a website and click the RipKit icon in Chrome’s toolbar.</li>
+</ol>
+</section>
+</main>
+<footer><span>RipKit for Chrome</span><a href="#install">Installation</a></footer>
+</div>
+<script>
+const project = location.pathname.split('/').filter(Boolean)[0];
+if (location.hostname.endsWith('.github.io') && project) {
+ const owner = location.hostname.slice(0,-'.github.io'.length);
+ const source = document.getElementById('source');
+ source.href = 'https://github.com/' + encodeURIComponent(owner) + '/' + encodeURIComponent(project);
+ source.removeAttribute('download');
+ source.textContent = 'GitHub';
+}
+</script>
+</body>
+</html>

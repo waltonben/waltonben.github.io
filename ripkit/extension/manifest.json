@@ -1,0 +1,38 @@
+{
+  "manifest_version": 3,
+  "name": "RipKit",
+  "version": "1.4.16",
+  "description": "Find fonts and images on a page, preview and save assets, and export an A4 brand report.",
+  "minimum_chrome_version": "110",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "webRequest",
+    "storage"
+  ],
+  "optional_host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "Open RipKit for this tab",
+    "default_icon": {
+      "16": "icon-16.png",
+      "32": "icon-32.png",
+      "48": "icon-48.png",
+      "128": "icon-128.png"
+    }
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'none'; worker-src 'self';"
+  },
+  "icons": {
+    "16": "icon-16.png",
+    "32": "icon-32.png",
+    "48": "icon-48.png",
+    "128": "icon-128.png"
+  }
+}

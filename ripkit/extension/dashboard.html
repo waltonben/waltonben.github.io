@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>RipKit — website assets</title>
+<link rel="stylesheet" href="styles.css"></head><body><main>
+<header><div class="brand"><img class="mark" src="icon-48.png" alt="">RipKit</div></header>
+<section class="hero"><h1>Inspect a webpage</h1><p>Find its fonts and images, or capture its visual identity in an A4 report.</p></section>
+<section class="panel"><form id="scanForm"><label for="url">PAGE OR STYLESHEET URL</label><div class="row"><input class="grow" id="url" type="url" placeholder="https://example.com" required><button class="primary" id="scan">Open URL & scan ↗</button></div></form>
+<div id="tabStatus" class="tab-status">Open RipKit from a website’s toolbar to select that tab.</div>
+<div class="actions"><button id="checkSitemap" type="button">Check sitemap</button><button id="scanSite" type="button" hidden>Scan entire site</button><span id="sitemapStatus" role="status"></span></div>
+<div id="status" role="status" aria-live="polite">Ready when you are.</div><details id="diagnostics" hidden><summary>Scan details</summary><div id="logs"></div></details></section>
+<nav class="main-tabs" role="tablist" aria-label="Scan results">
+<button type="button" role="tab" id="fontsTab" aria-controls="fontsPanel" aria-selected="true">Fonts</button>
+<button type="button" role="tab" id="imagesTab" aria-controls="imagesPanel" aria-selected="false" tabindex="-1">Images</button>
+<button type="button" role="tab" id="brandTab" aria-controls="brandPanel" aria-selected="false" tabindex="-1">Brand</button>
+</nav>
+<section id="fontsPanel" role="tabpanel" aria-labelledby="fontsTab">
+<section class="panel toolbar"><div><label for="preview">YOUR PREVIEW TEXT</label><input id="preview" type="text" value="The quick brown fox jumps over the lazy dog."></div><div><label for="size">PREVIEW SIZE <output id="sizeValue">36 px</output></label><div class="range"><span>Aa</span><input id="size" type="range" min="16" max="88" value="36" aria-label="Preview size"></div></div></section>
+<div class="results-heading"><h2>Discovered fonts <span class="count" id="count">0</span></h2><button id="allFonts" disabled>Download all fonts ZIP</button></div><p id="fontZipStatus" role="status"></p><div class="grid" id="results"></div>
+</section>
+<section id="imagesPanel" role="tabpanel" aria-labelledby="imagesTab" hidden>
+<div class="results-heading"><h2>Images and vectors</h2></div>
+<div class="image-toolbar">
+<div id="imageViews" class="actions" role="group" aria-label="Image categories">
+<button type="button" data-image-view="all" aria-pressed="true">View All</button>
+<button type="button" data-image-view="logos" aria-pressed="false">Logos</button>
+<button type="button" data-image-view="images" aria-pressed="false">Images</button>
+</div>
+<select id="imageDownload" aria-label="Download images as ZIP" disabled>
+<option value="" disabled hidden>Download ZIP…</option>
+<option value="all">Download all</option>
+<option value="logos">Download logos</option>
+<option value="images">Download images</option>
+</select>
+</div>
+<p id="imageStatus" role="status">Scan a webpage to discover its images and vectors.</p>
+<div id="imageProgressPanel" class="image-progress" hidden>
+<label for="imageProgress" id="imageProgressText">Checking image files…</label>
+<progress id="imageProgress" max="1" value="0"></progress>
+</div>
+<p id="imageZipStatus" role="status"></p><div id="imageViewport" class="image-viewport" tabindex="0" aria-label="Scroll through images" hidden><div id="imageBefore"></div><div class="grid image-grid" id="imageResults"></div><div id="imageAfter"></div></div>
+</section>
+<section id="brandPanel" role="tabpanel" aria-labelledby="brandTab" hidden>
+<div class="results-heading"><h2>Brand report</h2><div class="actions"><button id="exportBrand" disabled>Export A4 PDF</button></div></div>
+<p id="brandStatus" role="status">Scan a webpage to generate its brand report.</p>
+<article id="brandReport"></article>
+</section>
+<footer class="bottom">No server, proxy or analytics. Website requests go directly to their original hosts. WOFF2 decoder embedded (wawoff2 2.0.1 / Google WOFF2). Files stay in this session. Font availability does not grant a licence to reuse it; check the font’s licence before using it in your work.</footer>
+</main><script src="collector.js"></script><script src="page-assets.js"></script><script src="app.js"></script><script src="media-report.js"></script><script src="site-scan.js"></script><script src="font-families.js"></script><script src="mood-board.js"></script><script src="local-fonts.js"></script><script src="startup.js"></script><!-- Embedded decoder licence:
+Copyright (c) 2013-2017 by the WOFF2 Authors.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+-->
+
+</body></html>
